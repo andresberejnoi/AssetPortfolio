@@ -1,7 +1,7 @@
 import datetime
 import re
 
-def get_ticker_dic_data(cmd_str,valid_flags=['-d']):
+def get_ticker_dic_data(cmd_str,valid_flags=['-d','-b','-dt','-t','-date']):
     """Given cmd string already parsed (instruction words removed) Ex:
         'aapl .24 123.4, .111 123.5, msft 0.001 200 -d,nrz 2.4 10.1, .19 9.80'
     
@@ -85,7 +85,7 @@ def get_ticker_dic_data(cmd_str,valid_flags=['-d']):
     return all_tickers_dic
 
 
-def command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_flags=['-d']):
+def command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_flags=['-d','-b','-dt','-t','-date']):
     #split between all commands (delimiter is: ';')
     #commands = re.split(',|;',command_str)
     commands = command_str.lower().split(';')
@@ -111,9 +111,13 @@ def command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_flags
         #print(tickers_dict)
     return inst_and_dicts_tuples
 
-def flag_processing(flag_string):
-    wp = r"\s*-([a-zA-Z]+)\s*([a-zA-Z]+|[0-9]+\-[0-9]+\-[0-9]+\s*[0-9\:\.]+|\s*)"  #this string was tested to work sufficiently well for a well formatted string like
+def get_flags(flag_string):
+    word_pattern     = r"[a-zA-Z]+"
+    time_pattern     = r"[0-9]+\:[0-9]+\:[0-9]+\.[0-9]+"
+    datetime_pattern = f"[0-9]+\-[0-9]+\-[0-9]+\s*{time_pattern}"
+    #wp = r"\s*-([a-zA-Z]+)\s*([a-zA-Z]+|[0-9]+\-[0-9]+\-[0-9]+\s*[0-9\:\.]+|\s*)"  #this string was tested to work sufficiently well for a well formatted string like
 
+    wp = f"\s*-([a-zA-Z]+)\s*({word_pattern}|{datetime_pattern}|{time_pattern}|\s*)"
     """
     Sample string: 
     s  = 'python main.py -f hello -d  -broker          robinhood -t 2000-10-01           14:44:20.999 -D -R'
@@ -127,3 +131,19 @@ def flag_processing(flag_string):
         ('D', ''),
         ('R', '')]
     """
+    flags = re.findall(wp,flag_string)
+
+    '''
+    #check if flag contains value. If it is empty, remove the empty space (for example in cases when the flag is '-d' and we don't expect a value)
+    #This cleaning is commented out for now. I may want to keep the returns consistent (i.e. always as a tuple instead of mixing single strings with tuples)
+    cleaned_flags = []
+    for flag in flags:
+        flag_val = flag[1]
+        if len(flag_val) < 1:
+            cleaned_flags.append(flag[0])
+        else:
+            cleaned_flags.append(flag)
+    '''
+
+    print(f"--> get_flags():\n\t{flags}")
+    return flags
