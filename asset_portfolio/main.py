@@ -18,7 +18,7 @@ def main(args):
         print(f"Detected {len(actions)} number of different ticker transactions.\n"+ \
               "Here they are:\n")
         for inst,act_dict in actions:
-            print(f"Instruction: {inst.upper()}\n{json.dumps(act_dict,indent=2)}")
+            print(f"Instruction: {inst.upper()}\n{json.dumps(act_dict,indent=1)}")
     
         time.sleep(2)
 
