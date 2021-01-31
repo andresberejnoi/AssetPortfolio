@@ -244,8 +244,8 @@ def command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_flags
         inst_list = re.findall(instructions_pattern,cmd_str)
         
         if len(inst_list) != 1:
-            print(f"Command entered:\n'{cmd_str}'.\n\nIt should contain a valid " + \
-                  f"a instruction word at the beginning. Valid instructions are:\n{valid_inst}")
+            print(f"Command entered:\n\t-->'{cmd_str}'\nConflict in `inst_list` --> {inst_list}\n\nIt should contain a valid " + \
+                  f"instruction word at the beginning. Valid instructions are:\n{valid_inst}")
             raise ValueError
         inst = inst_list[0]
         
