@@ -140,11 +140,12 @@ class TransactionEvent(object):
             self._datetime = datetime.datetime.fromisoformat(dt_str)
             indexes_to_delete.append(idx_date)
             indexes_to_delete.append(idx_time)
-            
+
         else: #when neither date or time flags are present
             if self.DT_FLAG in flags:
                 idx = flags.index(self.DT_FLAG)
                 val = vals[idx]
+                print(f"\n**ERROR CATCHER:\n--> self.flags={self.flags}\n--> idx={idx}\n--> val={val}\n")
                 self._datetime = datetime.datetime.fromisoformat(val)
                 indexes_to_delete.append(idx)
             else:
@@ -328,7 +329,8 @@ def OLD_command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_f
 
 def get_flags(flag_string):
     word_pattern     = r"[a-zA-Z]+"
-    time_pattern     = r"[0-9]+\:[0-9]+\:[0-9]+\.[0-9]+"
+    #time_pattern     = r"[0-9]+\:[0-9]+\:[0-9]+\.[0-9]+"   #this pattern is not flexible
+    time_pattern = r"[0-9\:\.]+"
     datetime_pattern = f"[0-9]+\-[0-9]+\-[0-9]+\s*{time_pattern}"
     #wp = r"\s*-([a-zA-Z]+)\s*([a-zA-Z]+|[0-9]+\-[0-9]+\-[0-9]+\s*[0-9\:\.]+|\s*)"  #this string was tested to work sufficiently well for a well formatted string like
 
