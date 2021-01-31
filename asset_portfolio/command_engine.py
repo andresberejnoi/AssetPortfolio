@@ -1,7 +1,7 @@
 import datetime
 import re
 
-def get_ticker_dic_data(cmd_str,valid_flags=['-d','-b','-dt','-t','-date']):
+def OLD_get_ticker_dict_data(cmd_str,valid_flags=['-d','-b','-dt','-t','-date']):
     """Given cmd string already parsed (instruction words removed) Ex:
         'aapl .24 123.4, .111 123.5, msft 0.001 200 -d,nrz 2.4 10.1, .19 9.80'
     
@@ -84,6 +84,61 @@ def get_ticker_dic_data(cmd_str,valid_flags=['-d','-b','-dt','-t','-date']):
                    
     return all_tickers_dic
 
+def command_parser(cmd_str):   #aka get_ticker_dict_data
+    """Processes a command str without the instruction word ('add','sell','sub','buy',etc)"""
+    #clean-up process
+    cmd_str          = cmd_str.lower().strip()
+    raw_transactions = [transaction.strip() for transaction in cmd_str.split(',')]   #each transaction is separated by a comma
+    
+    #patterns
+    ticker_pattern = r"[a-z]+"
+    
+    #MAIN LOOP
+    last_ticker = ''
+    transactions_dict = {}   #dict to map ticker symbol to list of TransactionEvent objects
+    
+    flag_idx=0
+    for idx, trans_str in enumerate(raw_transactions):
+        res = re.match(ticker_pattern,trans_str)
+        
+        if res:
+            ticker = res.group()
+            trans_str = re.sub(ticker,'',trans_str).strip()  #remove ticker from string
+            
+            if ticker!=last_ticker:          #reset flag index only when new ticker is different  (to prevent cases when user enters same ticker explicitely i.e: add nrz 0.3 200, nrz 4 10.5)
+                flag_idx  =0
+            else:
+                flag_idx += 1
+        else:
+            if len(last_ticker) > 0:
+                ticker    = last_ticker
+                flag_idx += 1
+            else:
+                print(f"Could not find valid ticker symbol in '{trans_str}' string.\n" + \
+                      f"Full command string:\n'{cmd_str}'")
+                raise ValueError
+        
+        #Parse flags
+        flags,trans_str = get_flags(trans_str)  #returns flags and a new string without flags
+        
+        #Determine the parameters of the transaction (amount, cost_basis, etc)
+        trans_items = trans_str.split()
+        num_shares  = trans_items[0]
+        cost_basis  = trans_items[1]
+        
+        t = TransactionEvent(ticker=ticker,
+                             amount=num_shares,
+                             cost_basis=cost_basis,
+                             flags=flags)
+        try:
+            transactions_dict[ticker].append(t)
+        
+        except KeyError:
+            transactions_dict[ticker] = [t]   #create list with first item
+        
+        last_ticker = ticker
+    
+    return transactions_dict 
 
 def command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_flags=['-d','-b','-dt','-t','-date']):
     #split between all commands (delimiter is: ';')
@@ -106,7 +161,7 @@ def command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_flags
         
         parsed_str = re.sub(instructions_pattern,'',cmd_str)
         
-        tickers_dict = get_ticker_dic_data(parsed_str,valid_flags)
+        tickers_dict = command_parser(parsed_str,valid_flags)
         inst_and_dicts_tuples.append((inst,tickers_dict))
         #print(tickers_dict)
     return inst_and_dicts_tuples
@@ -144,6 +199,6 @@ def get_flags(flag_string):
         else:
             cleaned_flags.append(flag)
     '''
-
+    clean_string = re.sub(wp,'',flag_string)
     print(f"--> get_flags():\n\t{flags}")
-    return flags
+    return flags,clean_string
