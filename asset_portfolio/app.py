@@ -76,11 +76,11 @@ class Transaction(db.Model):
 @app.route("/",methods=['GET','POST'])
 def home():
     if request.form:
-        try:
-            print(request.form)
-            tickers_dict = command_engine(request.form.get('transactions'))  #transactions is how the text input field is called in the html page for this endpoint
-        except:
-            return "Something went horribly wrong, but I don't know what"
+        #try:
+        print(request.form)
+        tickers_dict = command_engine(request.form.get('transactions'))  #transactions is how the text input field is called in the html page for this endpoint
+        #except:
+        #    return "Something went horribly wrong, but I don't know what"
         
         for symbol in tickers_dict:
             SYMBOL_object = Security.query.filter(Security.symbol==symbol).first()     #without .first() the return is a query object
