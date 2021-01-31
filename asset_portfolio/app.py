@@ -73,8 +73,40 @@ class Transaction(db.Model):
         return f"<Transaction: symbol={self.symbol} num_shares={self.num_shares} cost_basis={self.cost_basis} is_dividend={self.is_dividend}>"
 """
 
-@app.route("/",methods=["GET", "POST"])
+@app.route("/",methods=['GET','POST'])
 def home():
+    if request.form:
+        try:
+            print(request.form)
+            tickers_dict = command_engine(request.form.get('transactions'))  #transactions is how the text input field is called in the html page for this endpoint
+        except:
+            return "Something went horribly wrong, but I don't know what"
+        
+        for symbol in tickers_dict:
+            SYMBOL_object = Security.query.filter(Security.symbol==symbol).first()     #without .first() the return is a query object
+            if SYMBOL_object is None:
+                SYMBOL_object = Security(symbol)
+                db.session.add(SYMBOL_object)
+                db.session.commit()
+            print(f"------> {SYMBOL_object}")
+            
+            trans_events = tickers_dict[symbol]   #gets list of TransactionEvent objects
+            for trans in trans_events:
+                TRANS_object = Transaction(
+                    trans.ticker, 
+                    trans.amount, 
+                    trans.cost_basis, 
+                    trans.is_dividend()
+                )
+
+                SYMBOL_object.transactions.append(TRANS_object)
+                db.session.add(TRANS_object)
+
+        db.session.commit()
+    return render_template("home.html")
+
+@app.route("/",methods=["GET", "POST"])
+def OLD_home():
     if request.form:
         try:
             print(request.form)
