@@ -151,12 +151,15 @@ class TransactionEvent(object):
             del self.flag_list[idx_pos]
 
     def is_dividend(self):
-        flags,vals in zip(*self.flags)
+        if len(self.flags) < 1:
+            return False 
+        
+        flags,vals = zip(*self.flags)
         if self.DIVIDEND_FLAG in flags:
             return True 
         else:
             return False
-            
+
     #-----Read-only methods
     @property
     def ticker(self):
