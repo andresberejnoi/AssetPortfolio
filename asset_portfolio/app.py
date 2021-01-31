@@ -96,7 +96,9 @@ def home():
                     trans.ticker, 
                     trans.amount, 
                     trans.cost_basis, 
-                    trans.is_dividend()
+                    trans.is_dividend(),
+                    #get_broker_id(trans.broker),
+                    time_of_execution=trans.datetime,
                 )
 
                 SYMBOL_object.transactions.append(TRANS_object)
