@@ -83,7 +83,7 @@ def OLD_get_ticker_dict_data(cmd_str,valid_flags=['-d','-b','-dt','-t','-date'])
         last_ticker = ticker     #updating for next round
                    
     return all_tickers_dic
-    
+
 class TransactionEvent(object):
     '''Storage object for transaction Events. It seems more organized than keeping
     a bunch of lists of tuples of lists and dicts'''
@@ -99,20 +99,22 @@ class TransactionEvent(object):
         
     
     def _set_datetime(self):
+        """sets datetime value from flags and also deletes those flags from self.flag_list after it's done"""
         if len(self.flag_list) > 0:
             flags,vals = zip(*self.flag_list) #split list of tuples into two lists
         else:
             self._datetime = datetime.datetime.utcnow()
             return 
         
-        time_flag = 'time'
+        time_flag = 't'
         date_flag = 'date'
         dt_flag   = 'dt'
-        
+        indexes_to_delete = []
         if dt_flag in flags:
             idx = flags.index(dt_flag)
             val = vals[idx]
             self._datetime = datetime.datetime.fromisoformat(val)
+            indexes_to_delete.append(idx)
         else:
             self._datetime = datetime.datetime.utcnow()
             
@@ -123,12 +125,14 @@ class TransactionEvent(object):
             date = datetime.datetime.fromisoformat(val)
             time = self._datetime.time()
             self._datetime = datetime.datetime.combine(date,time)
+            indexes_to_delete.append(idx)
         elif (time_flag in flags) and (date_flag not in flags):
             idx = flags.index(time_flag)
             val = vals[idx]
             date = self._datetime.date()
             time = datetime.time.fromisoformat(val)
             self._datetime = datetime.datetime.combine(date,time)
+            indexes_to_delete.append(idx)
         elif (date_flag in flags) and (time_flag in flags):
             idx_date = flags.index(date_flag)
             idx_time = flags.index(time_flag)
@@ -137,7 +141,12 @@ class TransactionEvent(object):
             time_str = vals[idx_time]
             dt_str   = f"{date_str} {time_str}"
             self._datetime = datetime.datetime.fromisoformat(dt_str)
-            
+            indexes_to_delete.append(idx_date)
+            indexes_to_delete.append(idx_time)
+
+        #here I delete the flags from flag list since they have a dedicated variable
+        for idx_pos in sorted(indexes_to_delete,reverse=True):
+            del self.flag_list[idx_pos]
             
     @property
     def ticker(self):
@@ -242,7 +251,7 @@ def command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_flags
         
         parsed_str = re.sub(instructions_pattern,'',cmd_str)
         
-        tickers_dict = command_parser(parsed_str,valid_flags)
+        tickers_dict = command_parser(parsed_str)
         inst_and_dicts_tuples.append((inst,tickers_dict))
         #print(tickers_dict)
     return inst_and_dicts_tuples
