@@ -3,3 +3,4 @@ pycache/
 
 *.ipynb
 *.txt
+*.db
