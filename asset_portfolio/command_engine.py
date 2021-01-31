@@ -89,6 +89,10 @@ class TransactionEvent(object):
     a bunch of lists of tuples of lists and dicts. There are some useful external methods
     such as is_dividend() to return a boolean if the transaction is a dividend payment.'''
     DIVIDEND_FLAG = 'div'
+    BROKER_FLAG   = 'b'
+    DT_FLAG       = 'dt'
+    TIME_FLAG     = 't'
+    DATE_FLAG     = 'date'
     def __init__(self, ticker,amount,cost_basis,flags=[]):
         self._ticker = ticker
         self._amount = amount
@@ -107,13 +111,10 @@ class TransactionEvent(object):
         else:
             self._datetime = datetime.datetime.utcnow()
             return 
-        
-        time_flag = 't'
-        date_flag = 'date'
-        dt_flag   = 'dt'
+
         indexes_to_delete = []
-        if dt_flag in flags:
-            idx = flags.index(dt_flag)
+        if self.DT_FLAG in flags:
+            idx = flags.index(self.DT_FLAG)
             val = vals[idx]
             self._datetime = datetime.datetime.fromisoformat(val)
             indexes_to_delete.append(idx)
@@ -121,23 +122,23 @@ class TransactionEvent(object):
             self._datetime = datetime.datetime.utcnow()
             
         #----
-        if (date_flag in flags) and (time_flag not in flags):
-            idx = flags.index(date_flag)
+        if (self.DATE_FLAG in flags) and (self.TIME_FLAG not in flags):
+            idx = flags.index(self.DATE_FLAG)
             val = vals[idx]
             date = datetime.datetime.fromisoformat(val)
             time = self._datetime.time()
             self._datetime = datetime.datetime.combine(date,time)
             indexes_to_delete.append(idx)
-        elif (time_flag in flags) and (date_flag not in flags):
-            idx = flags.index(time_flag)
+        elif (self.TIME_FLAG in flags) and (self.DATE_FLAG not in flags):
+            idx = flags.index(self.TIME_FLAG)
             val = vals[idx]
             date = self._datetime.date()
             time = datetime.time.fromisoformat(val)
             self._datetime = datetime.datetime.combine(date,time)
             indexes_to_delete.append(idx)
-        elif (date_flag in flags) and (time_flag in flags):
-            idx_date = flags.index(date_flag)
-            idx_time = flags.index(time_flag)
+        elif (self.DATE_FLAG in flags) and (self.TIME_FLAG in flags):
+            idx_date = flags.index(self.DATE_FLAG)
+            idx_time = flags.index(self.self.TIME_FLAG)
             
             date_str = vals[idx_date]
             time_str = vals[idx_time]
@@ -160,6 +161,7 @@ class TransactionEvent(object):
         else:
             return False
 
+    
     #-----Read-only methods
     @property
     def ticker(self):
