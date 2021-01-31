@@ -39,15 +39,15 @@ class Transaction(db.Model):
     last_updated   = db.Column(db.DateTime,server_default=db.func.now(), onupdate=db.func.now(),       nullable=True)
     
 
-    def __init__(self,symbol,num_shares,cost_basis,is_dividend=False,broker_id=1,time_of_execution=None):
+    def __init__(self,symbol,num_shares,cost_basis,is_dividend=False,broker_id=1,time_execution=None):
         self.symbol      = symbol.upper()
         self.num_shares  = num_shares
         self.cost_basis  = cost_basis
         self.is_dividend = is_dividend
         self.broker_id   = broker_id
 
-        if time_of_execution is not None:
-            self.time_of_execution = self.time_of_execution      #if it is None, the server will apply the current time, as indicated above in the setup
+        if time_execution is not None:
+            self.time_execution = time_execution      #if it is None, the server will apply the current time, as indicated above in the setup
 
     def __repr__(self):
         return f"<Transaction: symbol={self.symbol} num_shares={self.num_shares} cost_basis={self.cost_basis} is_dividend={self.is_dividend}>"
