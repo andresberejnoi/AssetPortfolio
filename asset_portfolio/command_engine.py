@@ -237,15 +237,15 @@ def command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_flags
     new_line = '\n'
     #print(f"\nCommands were split as:\n{new_line.join(commands)}\n\n")
     
-    inst_and_dicts_tuples = []  #list to hold tuples of (instruction,dict)
+    inst_and_dicts_tuples = []  #list to hold tuples of (instruction_str,dict)
     for cmd_str in commands:
         #look for the instruction (add, sub, sell, etc)
         instructions_pattern = "|".join(valid_inst)   #creates string like: 'add|sub|sell|buy' for regex
         inst_list = re.findall(instructions_pattern,cmd_str)
         
         if len(inst_list) != 1:
-            print(f"Command entered:\n'{cmd_str}'.\n\nIt should contain valid a " + \
-                  f"instruction word at the beginning. Valid instructions are:\n{valid_inst}")
+            print(f"Command entered:\n'{cmd_str}'.\n\nIt should contain a valid " + \
+                  f"a instruction word at the beginning. Valid instructions are:\n{valid_inst}")
             raise ValueError
         inst = inst_list[0]
         
