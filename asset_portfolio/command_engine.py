@@ -225,12 +225,43 @@ def command_parser(cmd_str):   #aka get_ticker_dict_data
         
         except KeyError:
             transactions_dict[ticker] = [t]   #create list with first item
-        
         last_ticker = ticker
     
     return transactions_dict 
 
-def command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_flags=['-d','-b','-dt','-t','-date']):
+def command_engine(command_str):
+    '''
+    Parses String containing stock transactions. To simplify things, there is no 
+    instruction word, just a list of instructions separated by commas. The old function
+    used to use semi-colons to separate between instructions (add, sub, buy, sell), but
+    since they are not used anymore, the code will raise an exemption for it.
+
+    Parameters
+    ----------
+    command_str: str
+                 The string to parse. It should contain comma-separated transactions. For example:
+                 aapl 3.5 148.5 -div -b robinhood, msft 10 220.8 -b robinhood, nrz 5 9.68
+
+    
+    Returns
+    -------
+    dict
+        Dictionary mapping ticker symbols to a list of TransactionEvent objects. Example:
+        {
+            'aapl':[<TransactionEvent>, <TransactionEvent>, <TransactionEvent>, ...],
+            'msft':[<TransactionEvent>,<TransactionEvent>],
+            'nrz':[<TransactionEvent>]
+        }
+    '''
+    #this function is mostly a wrapper for command_parser,
+    #but I'm keeping this way in case I later need to pre-process the data.
+
+    #replace semi-colons for commas
+    #command_str = command_str.replace(';',',')
+    tickers_dict = command_parser(command_str)
+    return tickers_dict
+
+def OLD_command_engine(command_str,valid_inst=['add','sub','sell','buy'],valid_flags=['-d','-b','-dt','-t','-date']):
     #split between all commands (delimiter is: ';')
     #commands = re.split(',|;',command_str)
     commands = command_str.lower().split(';')
