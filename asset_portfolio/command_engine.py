@@ -86,7 +86,9 @@ def OLD_get_ticker_dict_data(cmd_str,valid_flags=['-d','-b','-dt','-t','-date'])
 
 class TransactionEvent(object):
     '''Storage object for transaction Events. It seems more organized than keeping
-    a bunch of lists of tuples of lists and dicts'''
+    a bunch of lists of tuples of lists and dicts. There are some useful external methods
+    such as is_dividend() to return a boolean if the transaction is a dividend payment.'''
+    DIVIDEND_FLAG = 'div'
     def __init__(self, ticker,amount,cost_basis,flags=[]):
         self._ticker = ticker
         self._amount = amount
@@ -147,7 +149,15 @@ class TransactionEvent(object):
         #here I delete the flags from flag list since they have a dedicated variable
         for idx_pos in sorted(indexes_to_delete,reverse=True):
             del self.flag_list[idx_pos]
+
+    def is_dividend(self):
+        flags,vals in zip(*self.flags)
+        if self.DIVIDEND_FLAG in flags:
+            return True 
+        else:
+            return False
             
+    #-----Read-only methods
     @property
     def ticker(self):
         return self._ticker
