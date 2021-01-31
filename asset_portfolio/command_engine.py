@@ -112,30 +112,24 @@ class TransactionEvent(object):
             self._datetime = datetime.datetime.utcnow()
             return 
 
-        indexes_to_delete = []
-        if self.DT_FLAG in flags:
-            idx = flags.index(self.DT_FLAG)
-            val = vals[idx]
-            self._datetime = datetime.datetime.fromisoformat(val)
-            indexes_to_delete.append(idx)
-        else:
-            self._datetime = datetime.datetime.utcnow()
-            
         #----
+        indexes_to_delete = []
         if (self.DATE_FLAG in flags) and (self.TIME_FLAG not in flags):
             idx = flags.index(self.DATE_FLAG)
             val = vals[idx]
             date = datetime.datetime.fromisoformat(val)
-            time = self._datetime.time()
+            time = datetime.time(hour=8,minute=0)
             self._datetime = datetime.datetime.combine(date,time)
             indexes_to_delete.append(idx)
+
         elif (self.TIME_FLAG in flags) and (self.DATE_FLAG not in flags):
             idx = flags.index(self.TIME_FLAG)
             val = vals[idx]
-            date = self._datetime.date()
+            date = datetime.datetime.utcnow().date()
             time = datetime.time.fromisoformat(val)
             self._datetime = datetime.datetime.combine(date,time)
             indexes_to_delete.append(idx)
+
         elif (self.DATE_FLAG in flags) and (self.TIME_FLAG in flags):
             idx_date = flags.index(self.DATE_FLAG)
             idx_time = flags.index(self.self.TIME_FLAG)
@@ -146,6 +140,17 @@ class TransactionEvent(object):
             self._datetime = datetime.datetime.fromisoformat(dt_str)
             indexes_to_delete.append(idx_date)
             indexes_to_delete.append(idx_time)
+            
+        else: #when neither date or time flags are present
+            if self.DT_FLAG in flags:
+                idx = flags.index(self.DT_FLAG)
+                val = vals[idx]
+                self._datetime = datetime.datetime.fromisoformat(val)
+                indexes_to_delete.append(idx)
+            else:
+                #self._datetime = datetime.datetime.utcnow()
+                self._datetime = None  #return none for now. It will be handled server side on mysql
+
 
         #here I delete the flags from flag list since they have a dedicated variable
         for idx_pos in sorted(indexes_to_delete,reverse=True):
@@ -161,7 +166,15 @@ class TransactionEvent(object):
         else:
             return False
 
-    
+    def get_broker(self):
+        flags,vals = zip(*self.flags)
+        if self.BROKER_FLAG in flags:
+            idx = flags.index(self.BROKER_FLAG)
+            broker = vals[idx]
+        else:
+            broker = 'robinhood'  #default broker for now
+        return broker
+
     #-----Read-only methods
     @property
     def ticker(self):
@@ -177,13 +190,24 @@ class TransactionEvent(object):
         return self._datetime
     @property
     def date(self):
-        return self.datetime.date()
+        try:
+            date = self.datetime.date()
+        except AttributeError:
+            date = None
+        return date
     @property
     def time(self):
-        return self.datetime.time()
+        try:
+            time = self.datetime.time()
+        except AttributeError:
+            time = None
+        return time
     @property
     def flags(self):
         return self.flag_list
+    @property 
+    def broker(self):
+        return self.get_broker()
     
     def __repr__(self):
         return f"<TransactionEvent>: {self.ticker:>5} {float(self.amount):.7f} {float(self.cost_basis):.4f} {self.date} {self.time:%H:%M:%S} {self.flags}"
