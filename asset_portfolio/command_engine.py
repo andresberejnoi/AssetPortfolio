@@ -83,6 +83,87 @@ def OLD_get_ticker_dict_data(cmd_str,valid_flags=['-d','-b','-dt','-t','-date'])
         last_ticker = ticker     #updating for next round
                    
     return all_tickers_dic
+    
+class TransactionEvent(object):
+    '''Storage object for transaction Events. It seems more organized than keeping
+    a bunch of lists of tuples of lists and dicts'''
+    def __init__(self, ticker,amount,cost_basis,flags=[]):
+        self._ticker = ticker
+        self._amount = amount
+        self._cost_basis = cost_basis
+        self.flag_list = flags  #list of tuples
+        
+        #set datetime value
+        self._datetime = None 
+        self._set_datetime()
+        
+    
+    def _set_datetime(self):
+        if len(self.flag_list) > 0:
+            flags,vals = zip(*self.flag_list) #split list of tuples into two lists
+        else:
+            self._datetime = datetime.datetime.utcnow()
+            return 
+        
+        time_flag = 'time'
+        date_flag = 'date'
+        dt_flag   = 'dt'
+        
+        if dt_flag in flags:
+            idx = flags.index(dt_flag)
+            val = vals[idx]
+            self._datetime = datetime.datetime.fromisoformat(val)
+        else:
+            self._datetime = datetime.datetime.utcnow()
+            
+        #----
+        if (date_flag in flags) and (time_flag not in flags):
+            idx = flags.index(date_flag)
+            val = vals[idx]
+            date = datetime.datetime.fromisoformat(val)
+            time = self._datetime.time()
+            self._datetime = datetime.datetime.combine(date,time)
+        elif (time_flag in flags) and (date_flag not in flags):
+            idx = flags.index(time_flag)
+            val = vals[idx]
+            date = self._datetime.date()
+            time = datetime.time.fromisoformat(val)
+            self._datetime = datetime.datetime.combine(date,time)
+        elif (date_flag in flags) and (time_flag in flags):
+            idx_date = flags.index(date_flag)
+            idx_time = flags.index(time_flag)
+            
+            date_str = vals[idx_date]
+            time_str = vals[idx_time]
+            dt_str   = f"{date_str} {time_str}"
+            self._datetime = datetime.datetime.fromisoformat(dt_str)
+            
+            
+    @property
+    def ticker(self):
+        return self._ticker
+    @property
+    def amount(self):
+        return self._amount
+    @property
+    def cost_basis(self):
+        return self._cost_basis
+    @property
+    def datetime(self):
+        return self._datetime
+    @property
+    def date(self):
+        return self.datetime.date()
+    @property
+    def time(self):
+        return self.datetime.time()
+    @property
+    def flags(self):
+        return self.flag_list
+    
+    def __repr__(self):
+        return f"<TransactionEvent>: {self.ticker:>5} {float(self.amount):.7f} {float(self.cost_basis):.4f} {self.date} {self.time:%H:%M:%S} {self.flags}"
+   
 
 def command_parser(cmd_str):   #aka get_ticker_dict_data
     """Processes a command str without the instruction word ('add','sell','sub','buy',etc)"""
