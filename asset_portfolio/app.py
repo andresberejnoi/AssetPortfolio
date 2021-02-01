@@ -3,12 +3,15 @@ import datetime
 
 from flask import Flask
 from flask import render_template
-from flask import request
+from flask import request, url_for, redirect
+from flask_bootstrap import Bootstrap
 
 #from flask_sqlalchemy import SQLAlchemy
 from models import db
 from models import Security, Transaction, Broker, Event
 from models import init_tables
+
+from forms import CryptoWalletForm, RegisterBrokerForm
 #my own modules here
 from command_engine import command_engine
 
@@ -20,6 +23,10 @@ database_file = f"sqlite:///{database_dir}"
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_file
 
+FAKE_SECRET_KEY = os.urandom(32)    #need secret key for CSRF from WTF-Forms to work
+app.config['SECRET_KEY'] = FAKE_SECRET_KEY
+
+Bootstrap(app)
 #db = SQLAlchemy(app)
 db.init_app(app)
 
@@ -74,6 +81,15 @@ def home():
 
         db.session.commit()
     return render_template("home.html")
+
+
+@app.route('/wallet_registration',methods=['GET','POST'])
+def wallet_registration():
+    form = CryptoWalletForm(request.form)
+    if request.method == 'POST' and form.validate_on_submit():
+        return redirect(url_for('home'))
+    else:
+        return render_template('crypto_wallet_registration.html', form=form)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=True)
