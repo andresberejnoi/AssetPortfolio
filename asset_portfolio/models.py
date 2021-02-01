@@ -71,7 +71,7 @@ class Broker(db.Model):
 
 class Event(db.Model):
     __tablename__ = 'securities_events'
-    id           = db.Column(db.Integer,db.Sequence('events_id_seq'),primary_key=True)
+    id           = db.Column(db.Integer,db.Sequence('securities_events_id_seq'),primary_key=True)
     symbol_id    = db.Column(db.Integer, db.ForeignKey('securities.id'),  nullable=False)
     event_type   = db.Column(db.String(64), nullable=False) 
     event_date   = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
@@ -79,6 +79,22 @@ class Event(db.Model):
  
     def __repr__(self):
         return f"< Event: symbol_id={self.symbol_id} event_type={self.event_type} event_date={self.event_date}"
+
+class CryptoCurrency(db.Model):
+    __tablename__ = 'cryptocurrencies'
+    id = db.Column(db.Integer, db.Sequence('cryptocurrencies_id_seq'), primary_key=True)
+    name = db.Column(db.String(64), nullable=False, unique=True)
+    symbol = db.Column(db.String(32), nullable=False, unique=True)
+    last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    wallets = db.relationship('CryptoWallet',backref='cryptocurrencies',lazy=True)
+
+class CryptoWallet(db.Model):
+    __tablename__ = 'cryptowallets'
+    id = db.Column(db.Integer, db.Sequence('cryptowallets_id_seq'), primary_key=True)
+    cryptocurrency_id = db.Column(db.Integer, db.ForeignKey('cryptocurrencies.id'), nullable=False)
+    address = db.Column(db.String(255), nullable=False)
+    last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
 
 def init_tables(db):
     #db.create_all()
