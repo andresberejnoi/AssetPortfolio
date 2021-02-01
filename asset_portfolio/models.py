@@ -93,6 +93,7 @@ class CryptoWallet(db.Model):
     id = db.Column(db.Integer, db.Sequence('cryptowallets_id_seq'), primary_key=True)
     cryptocurrency_id = db.Column(db.Integer, db.ForeignKey('cryptocurrencies.id'), nullable=False)
     address = db.Column(db.String(255), nullable=False)
+    nickname = db.Column(db.String(64), nullable=True)
     last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
 
 
