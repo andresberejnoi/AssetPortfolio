@@ -32,46 +32,11 @@ with app.app_context():
 #init_tables(db)
 #class Symbols(db.Model):
 
-"""
-class Security(db.Model):
-    __tablename__ = 'securities'
-    
-    id           = db.Column(db.Integer,db.Sequence('securities_id_seq'),primary_key=True)
-    symbol       = db.Column(db.String(32), nullable=False, unique=True)
-    instrument   = db.Column(db.String(64))
-    name         = db.Column(db.String(255))
-    sector       = db.Column(db.String(255))
-    currency     = db.Column(db.String(32))
-    transactions = db.relationship('Transaction',backref='securities',lazy=True)
-    
-    def __init__(self,symbol,instrument='',name='',sector='',currency='USD'):
-        self.symbol = symbol
+def get_broker_id(broker_name, database):
+    broker_name = broker_name.strip().lower()   #keep everything lowercase and stripped
+    Broker.query.filter(Broker.name==broker_name).first()
 
-    def __repr__(self):
-        return f"Security(ticker={self.symbol}, instrument={self.instrument}, name={self.name}, currency={self.currency})"
 
-class Transaction(db.Model):
-    __tablename__ = 'transactions'
-    id           = db.Column(db.Integer, db.Sequence('transactions_id_seq'), primary_key=True)
-    #symbol_id   = db.Column(db.Integer,       nullable=False)
-    symbol_id    = db.Column(db.Integer, db.ForeignKey('securities.id'),  nullable=False)
-    #symbol       = db.relationship('Symbol')
-    num_shares   = db.Column(db.Numeric(19,9, asdecimal=True),         nullable=False)
-    cost_basis   = db.Column(db.Numeric(19,5, asdecimal=True),         nullable=False)
-    is_dividend  = db.Column(db.Boolean,                               nullable=True)
-    time_created = db.Column(db.DateTime,server_default=db.func.now(), nullable=False)
-    time_updated = db.Column(db.DateTime,onupdate=db.func.now(),       nullable=True)
-    
-
-    def __init__(self,symbol,num_shares,cost_basis,is_dividend=False):
-        self.symbol      = symbol.upper()
-        self.num_shares  = num_shares
-        self.cost_basis  = cost_basis
-        self.is_dividend = is_dividend
-
-    def __repr__(self):
-        return f"<Transaction: symbol={self.symbol} num_shares={self.num_shares} cost_basis={self.cost_basis} is_dividend={self.is_dividend}>"
-"""
 
 @app.route("/",methods=['GET','POST'])
 def home():
