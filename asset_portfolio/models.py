@@ -34,7 +34,7 @@ class Transaction(db.Model):
     num_shares     = db.Column(db.Numeric(19,9, asdecimal=True),         nullable=False)
     cost_basis     = db.Column(db.Numeric(19,5, asdecimal=True),         nullable=False)
     is_dividend    = db.Column(db.Boolean,                               nullable=True)
-    broker_id      = db.Column(db.Integer, db.ForeignKey('brokers.id'),  nullable=True)
+    broker_id      = db.Column(db.Integer, db.ForeignKey('brokers.id'),  nullable=False)
     time_execution = db.Column(db.DateTime,server_default=db.func.now(), nullable=False)    #it is important to have the time of the actual execution, because the events table will use that time to determine accurate share counts
     last_updated   = db.Column(db.DateTime,server_default=db.func.now(), onupdate=db.func.now(),       nullable=True)
     
@@ -55,7 +55,7 @@ class Transaction(db.Model):
 class Broker(db.Model):
     __tablename__ = 'brokers'
     id      = db.Column(db.Integer, db.Sequence('brokers_id_seq'), primary_key=True)
-    name    = db.Column(db.String(255), nullable=False,)# unique=True)
+    name    = db.Column(db.String(255), nullable=False, unique=True)
     website = db.Column(db.String(255), nullable=True) 
     last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now(),nullable=False)
     transactions = db.relationship('Transaction',backref='brokers',lazy=True)
@@ -96,7 +96,7 @@ def init_tables(db):
 
     str_list = "\n".join([str(b) for b in broker_objects])
     print(f'\n\nAdding broker Objects:\n{str_list}')
-    #db.session.commit()
+    db.session.commit()
 
 def create_app():
     app = Flask(__name__)
