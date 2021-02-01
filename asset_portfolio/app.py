@@ -32,9 +32,10 @@ with app.app_context():
 #init_tables(db)
 #class Symbols(db.Model):
 
-def get_broker_id(broker_name, database):
+def get_Broker_object(broker_name):
     broker_name = broker_name.strip().lower()   #keep everything lowercase and stripped
-    Broker.query.filter(Broker.name==broker_name).first()
+    broker = Broker.query.filter(Broker.name==broker_name).first()
+    return broker
 
 
 
@@ -57,6 +58,7 @@ def home():
             
             trans_events = tickers_dict[symbol]   #gets list of TransactionEvent objects
             for trans in trans_events:
+                BROKER_object = get_Broker_object(trans.broker)
                 TRANS_object = Transaction(
                     trans.ticker, 
                     trans.amount, 
@@ -67,6 +69,7 @@ def home():
                 )
 
                 SYMBOL_object.transactions.append(TRANS_object)
+                BROKER_object.transactions.append(TRANS_object)
                 db.session.add(TRANS_object)
 
         db.session.commit()

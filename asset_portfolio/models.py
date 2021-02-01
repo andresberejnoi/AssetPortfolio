@@ -84,8 +84,8 @@ def init_tables(db):
     #db.create_all()
 
     #register brokers here
-    brokers_list = [('robinhood','https://robinhood.com/us/en/'),('shareowner_online','https://www.shareowneronline.com/')]
-    #brokers_list = [('robinhood','fake_website'),('shareowner_online','fake_website')]
+    brokers_list = [('robinhood','https://robinhood.com/us/en/'),('shareowner','https://www.shareowneronline.com/')]
+    #brokers_list = [('robinhood','fake_website'),('shareowner','fake_website')]
 
     #for broker_item in brokers:
     #    broker,website = broker_item

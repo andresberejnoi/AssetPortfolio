@@ -93,6 +93,8 @@ class TransactionEvent(object):
     DT_FLAG       = 'dt'
     TIME_FLAG     = 't'
     DATE_FLAG     = 'date'
+
+    DEFAULT_BROKER = 'robinhood'
     def __init__(self, ticker,amount,cost_basis,flags=[]):
         self._ticker = ticker
         self._amount = amount
@@ -168,6 +170,9 @@ class TransactionEvent(object):
             return False
 
     def get_broker(self):
+        if len(self.flags) < 1:
+            return self.DEFAULT_BROKER
+
         flags,vals = zip(*self.flags)
         if self.BROKER_FLAG in flags:
             idx = flags.index(self.BROKER_FLAG)
