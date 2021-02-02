@@ -1,11 +1,13 @@
-<html>
-  <body>
-    <p>Enter command string here: (i.e. aapl 0.4 200 -t 10:48, msft 0.5 228)</p>
-    <form method="POST" action="/">
-      <input type="text" name="transactions">
-      <input type="submit" value="Add">
-    </form>
-
-    <p><a href="{{ url_for('wallet_registration') }}">Track crypto addresses!</a></p>
-  </body>
-</html>
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% block content %}
+<div class="container">
+  <h3>Enter Transactions Manually</h3>
+  <hr>
+    {{ wtf.quick_form(form) }}
+  <hr>
+  <p>Cool Text</p>
+  <p><a href="{{ url_for('wallet_registration') }}">Track crypto addresses!</a></p>
+  <p><a href="{{ url_for('register_broker') }}">Register a broker</a></p>
+</div>
+{% endblock %}
