@@ -1,0 +1,12 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% block content %}
+<div class="container">
+  <h3>Register a Broker</h3>
+  <hr>
+    {{ wtf.quick_form(form) }}
+  <hr>
+  <p>I'm Text</p>
+  <p><a href="{{ url_for('home') }}">back home</a></p>
+</div>
+{% endblock %}
