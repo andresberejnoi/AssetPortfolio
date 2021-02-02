@@ -88,6 +88,11 @@ class CryptoCurrency(db.Model):
     last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     wallets = db.relationship('CryptoWallet',backref='cryptocurrencies',lazy=True)
 
+    def __init__(self,symbol,name=None):
+        self.symbol = symbol
+        if name is not None:
+            self.name = name
+
 class CryptoWallet(db.Model):
     __tablename__ = 'cryptowallets'
     id = db.Column(db.Integer, db.Sequence('cryptowallets_id_seq'), primary_key=True)
@@ -95,6 +100,11 @@ class CryptoWallet(db.Model):
     address = db.Column(db.String(255), nullable=False)
     nickname = db.Column(db.String(64), nullable=True)
     last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+    def __init__(self,address,nickname='wallet'):
+        self.address  = address 
+        self.nickname = nickname
+
 
 
 def init_tables(db):
