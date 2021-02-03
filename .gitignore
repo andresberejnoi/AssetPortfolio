@@ -3,4 +3,5 @@ pycache/
 
 *.ipynb
 *.txt
-*.db
+./**/*.db
+./**/_flask_PID
