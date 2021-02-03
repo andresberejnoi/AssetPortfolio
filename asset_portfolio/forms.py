@@ -1,5 +1,5 @@
 from wtforms import (SubmitField, BooleanField, StringField, 
-                    PasswordField, validators)
+                    PasswordField, SelectField, validators)
 from flask_wtf import FlaskForm
 
 class TransactionsForm(FlaskForm):
@@ -15,4 +15,8 @@ class CryptoWalletForm(FlaskForm):
 class RegisterBrokerForm(FlaskForm):
     name = StringField('Enter Broker database name (type something short)',[validators.DataRequired()])
     website = StringField("Broker's Website")
+    submit = SubmitField('Submit')
+
+class CheckEntryForm(FlaskForm):
+    table = SelectField('Table',choices=[(0,'securities'),(1,'transactions'),(2,'brokers'),(3,'crypto'),(4,'wallets')])
     submit = SubmitField('Submit')

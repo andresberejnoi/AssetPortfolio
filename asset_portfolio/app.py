@@ -36,9 +36,13 @@ from models import db
 from models import (Security, Transaction, Broker, 
                     Event, CryptoCurrency, CryptoWallet)
 from models import init_tables
-from forms import CryptoWalletForm, RegisterBrokerForm, TransactionsForm
+from forms import (CryptoWalletForm, RegisterBrokerForm, 
+                   TransactionsForm, CheckEntryForm)
 from command_engine import command_engine
 
+#=================================================
+python_PID = os.getpid()
+#=================================================
 #Here we define a database connection
 project_dir  = os.path.dirname(os.path.abspath(__file__))
 database_dir = os.path.join(project_dir, "asset_portfolio.db")
@@ -170,6 +174,35 @@ def register_broker():
     else:
         return render_template('register_broker.html',form=form)
 
+@app.route('/check_entries',methods=['GET','POST'])
+def check_entries():
+    form = CheckEntryForm(request.form)
+    tables = []
+    titles = []
+    if request.method=='POST' and form.validate_on_submit():
+        table_to_show = form.table.data 
+        #print(f"\n\nTable name chosen: {table_to_show}, type={type(table_to_show)}\n\n")
+        if table_to_show == '0': #'securities':
+            df = pd.read_sql(sql=db.session.query(Security).statement,con=db.session.bind) 
+
+        elif table_to_show == '1': #'transactions':
+            #print("\n\nI WAS HERE!!!#$!@!$%!\n\n")
+            df = pd.read_sql(sql=db.session.query(Transaction).statement,con=db.session.bind)
+
+        elif table_to_show == '2': #'brokers':
+            df = pd.read_sql(sql=db.session.query(Broker).statement,con=db.session.bind)
+
+        elif table_to_show == '3': #'crypto':
+            df = pd.read_sql(sql=db.session.query(CryptoCurrency).statement,con=db.session.bind)
+
+        elif table_to_show == '4': #'wallets':
+            df = pd.read_sql(sql=db.session.query(CryptoWallet).statement,con=db.session.bind)
+        
+        tables=[df.to_html(classes='mystyle')]
+        titles=df.columns.values
+        return render_template('check_entries.html',form=form,tables=tables,titles=titles)
+    else:
+        return render_template('check_entries.html',form=form,tables=tables,titles=titles)
 #======================================
 #  Creating a Bokeh App to embed into Flask
 
@@ -214,5 +247,17 @@ def bk_worker():
 
 Thread(target=bk_worker).start()
 
+def write_pid_to_file(pid,filename):
+    with open(filename,'w') as f:
+        f.write(str(pid))
+
 if __name__ == "__main__":
-    app.run(port=8000)#, debug=True)
+    #-------
+    # Getting PID to kill this process later (not necessary, but it is an annoyance to do it manually)
+    python_PID = os.getpid()
+    print(f"\n\n--> PID of this Python App:\n\t{python_PID}\n\n")
+    write_pid_to_file(python_PID,'_flask_PID')
+    #------
+
+    app.run(port=8000, debug=True)
+    
