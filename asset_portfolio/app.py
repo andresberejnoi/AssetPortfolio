@@ -1,19 +1,42 @@
 import os
 import datetime 
+import pandas as pd
 
+
+#============================================
+#     Flask Related Import
 from flask import Flask
 from flask import render_template
 from flask import request, url_for, redirect
 from flask_bootstrap import Bootstrap
 
-#from flask_sqlalchemy import SQLAlchemy
+#============================================
+#     Bokeh-Related Imports 
+from bokeh.embed import server_document, components
+from bokeh.layouts import column, row, widgetbox
+from bokeh.models import ColumnDataSource, Slider
+from bokeh.models.tools import HoverTool
+from bokeh.models.widgets import Select
+from bokeh.plotting import figure
+from bokeh.server.server import Server
+from bokeh.themes import Theme
+from tornado.ioloop import IOLoop
+from bokeh.palettes import inferno
+from bokeh.transform import factor_cmap
+
+from bokeh.sampledata.sea_surface_temperature import sea_surface_temperature
+
+# from bokeh.embed import components
+from bokeh.io import curdoc
+
+from threading import Thread
+#============================================
+#     Local Files and Modules
 from models import db
 from models import (Security, Transaction, Broker, 
                     Event, CryptoCurrency, CryptoWallet)
 from models import init_tables
-
 from forms import CryptoWalletForm, RegisterBrokerForm, TransactionsForm
-#my own modules here
 from command_engine import command_engine
 
 #Here we define a database connection
@@ -75,42 +98,6 @@ def get_cryptocurrency_object(crypto_symbol):
         db.session.add(crypto_object)
         db.session.commit()
     return crypto_object
-
-#@app.route("/",methods=['GET','POST'])
-def OLD_home():
-    if request.form:
-        #try:
-        print(request.form)
-        tickers_dict = command_engine(request.form.get('transactions'))  #transactions is how the text input field is called in the html page for this endpoint
-        #except:
-        #    return "Something went horribly wrong, but I don't know what"
-        
-        for symbol in tickers_dict:
-            SYMBOL_object = Security.query.filter(Security.symbol==symbol).first()     #without .first() the return is a query object
-            if SYMBOL_object is None:
-                SYMBOL_object = Security(symbol)
-                db.session.add(SYMBOL_object)
-                db.session.commit()
-            print(f"------> {SYMBOL_object}")
-            
-            trans_events = tickers_dict[symbol]   #gets list of TransactionEvent objects
-            for trans in trans_events:
-                BROKER_object = get_Broker_object(trans.broker)
-                TRANS_object = Transaction(
-                    trans.ticker, 
-                    trans.amount, 
-                    trans.cost_basis, 
-                    trans.is_dividend(),
-                    #get_broker_id(trans.broker),
-                    time_execution=trans.datetime,
-                )
-
-                SYMBOL_object.transactions.append(TRANS_object)
-                BROKER_object.transactions.append(TRANS_object)
-                db.session.add(TRANS_object)
-
-        db.session.commit()
-    return render_template("home.html")
 
 
 @app.route("/",methods=['GET','POST'])
@@ -183,5 +170,49 @@ def register_broker():
     else:
         return render_template('register_broker.html',form=form)
 
+#======================================
+#  Creating a Bokeh App to embed into Flask
+
+def bkapp(doc):
+    df = sea_surface_temperature.copy()
+    source = ColumnDataSource(data=df)
+
+    plot = figure(x_axis_type='datetime', y_range=(0, 25), y_axis_label='Temperature (Celsius)',
+                  title="Sea Surface Temperature at 43.18, -70.43")
+    plot.line('time', 'temperature', source=source)
+
+    def callback(attr, old, new):
+        if new == 0:
+            data = df
+        else:
+            data = df.rolling(f"{new}D").mean()
+        source.data = ColumnDataSource.from_df(data)
+
+    slider = Slider(start=0, end=30, value=0, step=1, title="Smoothing by N Days")
+    slider.on_change('value', callback)
+
+    doc.add_root(column(slider, plot))
+
+    doc.theme = Theme(filename="theme.yaml")
+
+
+@app.route('/bkapp', methods=['GET'])
+def bkapp_page():
+    script = server_document('http://localhost:5006/bkapp')
+    print(f"Here is the script:\n\n{script}\n\n")
+    return render_template("embed.html", script=script, template="Flask")#, relative_urls=False)
+
+
+def bk_worker():
+    # Can't pass num_procs > 1 in this configuration. If you need to run multiple
+    # processes, see e.g. flask_gunicorn_embed.py
+    #server = Server({'/bkapp': bkapp}, io_loop=IOLoop(), allow_websocket_origin=["0.0.0.0:8000"])
+    server = Server({'/bkapp':bkapp}, io_loop=IOLoop(), allow_websocket_origin=["localhost:8000","127.0.0.1:8000"])
+    server.start()
+    server.io_loop.start()
+
+
+Thread(target=bk_worker).start()
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', debug=True)
+    app.run(port=8000)#, debug=True)
