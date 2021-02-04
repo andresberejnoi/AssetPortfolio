@@ -226,7 +226,7 @@ def command_parser(cmd_str):   #aka get_ticker_dict_data
     raw_transactions = [transaction.strip() for transaction in cmd_str.split(',')]   #each transaction is separated by a comma
     
     #patterns
-    ticker_pattern = r"[a-z]+"
+    ticker_pattern = r"[a-zA-Z]+"  #could use some alteration of r"(?<!-)[a-zA-Z]+" to ignore flags, but it is already taken care of
     
     #MAIN LOOP
     last_ticker = ''
@@ -234,8 +234,12 @@ def command_parser(cmd_str):   #aka get_ticker_dict_data
     
     flag_idx=0
     for idx, trans_str in enumerate(raw_transactions):
+
+        #Parse flags
+        flags,trans_str = get_flags(trans_str)  #returns flags and a new string without flags
+
+        # Match the ticker symbol
         res = re.match(ticker_pattern,trans_str)
-        
         if res:
             ticker = res.group()
             trans_str = re.sub(ticker,'',trans_str).strip()  #remove ticker from string
@@ -253,8 +257,7 @@ def command_parser(cmd_str):   #aka get_ticker_dict_data
                       f"Full command string:\n'{cmd_str}'")
                 raise ValueError
         
-        #Parse flags
-        flags,trans_str = get_flags(trans_str)  #returns flags and a new string without flags
+        
         
         #Determine the parameters of the transaction (amount, cost_basis, etc)
         trans_items = trans_str.split()
@@ -367,5 +370,5 @@ def get_flags(flag_string):
             cleaned_flags.append(flag)
     '''
     clean_string = re.sub(wp,'',flag_string)
-    print(f"--> get_flags():\n\t{flags}")
+    print(f"--> get_flags():\n\t{flags}\n\tOriginal String: {flag_string}")
     return flags,clean_string
