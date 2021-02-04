@@ -1,5 +1,6 @@
 from wtforms import (SubmitField, BooleanField, StringField, 
-                    PasswordField, SelectField, validators)
+                    PasswordField, SelectField, validators,
+                    IntegerField)
 from flask_wtf import FlaskForm
 
 class TransactionsForm(FlaskForm):
@@ -19,4 +20,5 @@ class RegisterBrokerForm(FlaskForm):
 
 class CheckEntryForm(FlaskForm):
     table = SelectField('Table',choices=[(0,'securities'),(1,'transactions'),(2,'brokers'),(3,'crypto'),(4,'wallets')])
+    rows_to_show = StringField('Rows to Show (from latest; default: all)',default='all')
     submit = SubmitField('Submit')
