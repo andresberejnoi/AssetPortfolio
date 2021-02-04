@@ -22,9 +22,12 @@ from bokeh.server.server import Server
 from bokeh.themes import Theme
 from tornado.ioloop import IOLoop
 from bokeh.palettes import inferno
-from bokeh.transform import factor_cmap
+from bokeh.transform import factor_cmap, dodge
+
+from bokeh.core.properties import value
 
 from bokeh.sampledata.sea_surface_temperature import sea_surface_temperature
+
 
 # from bokeh.embed import components
 from bokeh.io import curdoc
@@ -106,6 +109,12 @@ def get_cryptocurrency_object(crypto_symbol):
 
 @app.route("/",methods=['GET','POST'])
 def home():
+    plot_fig = histogram_holdings()
+    if plot_fig is not None:
+        script, div = components(plot_fig)
+    else:
+        script = ''
+        div    = ''
     form = TransactionsForm(request.form)
     if request.method == 'POST' and form.validate_on_submit():
 
@@ -138,9 +147,10 @@ def home():
                 db.session.add(TRANS_object)
 
         db.session.commit()
-        return redirect(url_for('home'))
+        #return redirect(url_for('home'))
+        return render_template("home.html", form=form, script=script, div=div)
     else:
-        return render_template("home.html", form=form)
+        return render_template("home.html", form=form, script=script, div=div)
 
 @app.route('/wallet_registration',methods=['GET','POST'])
 def wallet_registration():
@@ -186,7 +196,6 @@ def check_entries():
             df = pd.read_sql(sql=db.session.query(Security).statement,con=db.session.bind) 
 
         elif table_to_show == '1': #'transactions':
-            #print("\n\nI WAS HERE!!!#$!@!$%!\n\n")
             df = pd.read_sql(sql=db.session.query(Transaction).statement,con=db.session.bind)
 
         elif table_to_show == '2': #'brokers':
@@ -198,7 +207,18 @@ def check_entries():
         elif table_to_show == '4': #'wallets':
             df = pd.read_sql(sql=db.session.query(CryptoWallet).statement,con=db.session.bind)
         
-        tables=[df.to_html(classes='mystyle')]
+        #-----determine how many rows to show
+        rows_to_show = form.rows_to_show.data
+        if rows_to_show == 'all':
+            num_rows = len(df)
+        else:
+            try:
+                num_rows = int(rows_to_show)
+            except ValueError:
+                num_rows = len(df)
+        #--------
+
+        tables=[df.tail(num_rows).to_html(classes='mystyle')]
         titles=df.columns.values
         return render_template('check_entries.html',form=form,tables=tables,titles=titles)
     else:
@@ -228,6 +248,44 @@ def bkapp(doc):
 
     doc.theme = Theme(filename="theme.yaml")
 
+def histogram_holdings():
+    sec_df = pd.read_sql(sql=db.session.query(Security).statement,con=db.session.bind)
+
+    if len(sec_df) < 1:
+        return None
+
+    symbol_to_id_mapping = {
+        symbol_id:symbol for symbol_id,symbol in zip(sec_df['id'],sec_df['symbol'])
+    }
+    #sec_df = sec_df[['symbol','id']]
+
+    trans_df = pd.read_sql(sql=db.session.query(Transaction).statement,con=db.session.bind)
+    if len(trans_df) < 1:
+        return None
+    trans_df['invested'] = trans_df['num_shares'] * trans_df['cost_basis']
+    #trans_df = trans_df[['symbol_id','invested']]
+    by_symbol = trans_df.groupby('symbol_id').sum().reset_index()
+    #print(by_symbol)
+    #print(sec_df)
+    #by_symbol['symbol'] = sec_df.loc[by_symbol['symbol_id']==sec_df['id']]['symbol']
+    by_symbol['symbol'] = by_symbol['symbol_id']
+    by_symbol.replace({'symbol':symbol_to_id_mapping})
+    by_symbol = by_symbol[['symbol','invested']]
+    #print(by_symbol)
+
+    source = ColumnDataSource(data=by_symbol)
+    plot_fig = figure(x_range=sec_df['symbol'], y_range=(0, by_symbol['invested'].max() + 50), 
+           plot_height=250, title="Money Invested per Security",
+           toolbar_location=None, tools="")
+
+    plot_fig.vbar(x=dodge('symbol', -0.5, range=plot_fig.x_range), top='invested', width=0.4, source=source,
+       color="#c9d9d3", legend_label="Dollars Invested")
+
+    plot_fig.x_range.range_padding = 0.1
+    plot_fig.xgrid.grid_line_color = None
+    plot_fig.legend.location = "top_left"
+    plot_fig.legend.orientation = "horizontal"
+    return plot_fig
 
 @app.route('/bkapp', methods=['GET'])
 def bkapp_page():
