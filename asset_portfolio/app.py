@@ -249,16 +249,21 @@ def bkapp(doc):
     doc.theme = Theme(filename="theme.yaml")
 
 def histogram_holdings():
+    '''
     sec_df = pd.read_sql(sql=db.session.query(Security).statement,con=db.session.bind)
 
     if len(sec_df) < 1:
         return None
 
-    symbol_to_id_mapping = {
+    id_to_symbol_mapping = {
         symbol_id:symbol for symbol_id,symbol in zip(sec_df['id'],sec_df['symbol'])
     }
     #sec_df = sec_df[['symbol','id']]
-
+    '''
+    #get list of id and symbols and turn them into dict
+    sec_list = db.session.query(Security.id,Security.symbol).all()
+    id_to_symbol_mapping = dict(sec_list)
+    
     trans_df = pd.read_sql(sql=db.session.query(Transaction).statement,con=db.session.bind)
     if len(trans_df) < 1:
         return None
@@ -268,13 +273,17 @@ def histogram_holdings():
     #print(by_symbol)
     #print(sec_df)
     #by_symbol['symbol'] = sec_df.loc[by_symbol['symbol_id']==sec_df['id']]['symbol']
-    by_symbol['symbol'] = by_symbol['symbol_id']
-    by_symbol.replace({'symbol':symbol_to_id_mapping})
+    by_symbol['symbol'] = by_symbol['symbol_id'].copy()
+    by_symbol = by_symbol.replace({'symbol':id_to_symbol_mapping})
+    
     by_symbol = by_symbol[['symbol','invested']]
-    #print(by_symbol)
+    print(id_to_symbol_mapping)
+    print(by_symbol)
+    #print(sec_df)
+    
 
     source = ColumnDataSource(data=by_symbol)
-    plot_fig = figure(x_range=sec_df['symbol'], y_range=(0, by_symbol['invested'].max() + 50), 
+    plot_fig = figure(x_range=by_symbol['symbol'], y_range=(0, by_symbol['invested'].max() + 100), 
            plot_height=250, title="Money Invested per Security",
            toolbar_location=None, tools="")
 
