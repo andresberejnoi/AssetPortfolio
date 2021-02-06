@@ -288,20 +288,23 @@ def histogram_holdings():
     #get list of id and symbols and turn them into dict
     sec_list = db.session.query(Security.id,Security.symbol).all()
     id_to_symbol_mapping = dict(sec_list)
+    id_to_symbol_mapping = {sym_id:id_to_symbol_mapping[sym_id].upper() for sym_id in id_to_symbol_mapping}
     
     trans_df = pd.read_sql(sql=db.session.query(Transaction).statement,con=db.session.bind)
     if len(trans_df) < 1:
         return None
     trans_df['invested'] = trans_df['num_shares'] * trans_df['cost_basis']
     #trans_df = trans_df[['symbol_id','invested']]
-    by_symbol = trans_df.groupby('symbol_id').sum().reset_index()
-    #print(by_symbol)
+    by_symbol = trans_df.groupby('symbol_id')
+    by_symbol = by_symbol[['num_shares','invested']].sum().reset_index()
+    by_symbol['avg_price'] = by_symbol['invested'] / by_symbol['num_shares']
+    print(by_symbol)
     #print(sec_df)
     #by_symbol['symbol'] = sec_df.loc[by_symbol['symbol_id']==sec_df['id']]['symbol']
     by_symbol['symbol'] = by_symbol['symbol_id'].copy()
     by_symbol = by_symbol.replace({'symbol':id_to_symbol_mapping})
     
-    by_symbol = by_symbol[['symbol','invested']]
+    #by_symbol = by_symbol[['symbol','invested']]
     print(id_to_symbol_mapping)
     print(by_symbol)
     #print(sec_df)
@@ -313,9 +316,23 @@ def histogram_holdings():
     source = ColumnDataSource(data=by_symbol)
 
     plot_fig = figure(x_range=by_symbol['symbol'], y_range=(0, by_symbol['invested'].max() + 100), 
-           plot_height=250, title="Money Invested per Security",
-           toolbar_location=None, tools=['hover', 'tap'], tooltips='@invested{($ 0.00 a)}')
+            plot_height=250, title="Money Invested per Security",
+            toolbar_location=None, 
+            tools=[ 'tap'], 
+    )
+    hover_tools = HoverTool(
+        tooltips=[
+                ('symbol','@symbol'),
+                ('invested','@invested{($ 0.00 a)}'),
+                ('shares','@num_shares{(0.0000)}'),
+                ('avg. price','@avg_price{($ 0.00 a)}')
+            ],
+        formatters={
+            '@symbol':'printf'
+        }
+    )
 
+    plot_fig.add_tools(hover_tools)
     #plot_fig.vbar(x=dodge('symbol', -0.5, range=plot_fig.x_range), top='invested', width=0.4, source=source,
     #   color="#c9d9d3", legend_label="Dollars Invested")
 
@@ -336,10 +353,12 @@ def histogram_holdings():
             var ind = source.selected.indices;
             console.log(ind);
             if (String(ind) != '') {
-                var symbol   = source.data['symbol'][ind].toUpperCase();
-                var invested = source.data['invested'][ind];
+                var symbol     = source.data['symbol'][ind].toUpperCase();
+                var invested   = source.data['invested'][ind].toFixed(2);
+                var num_shares = source.data['num_shares'][ind].toFixed(7);
+                var avg_price  = source.data['avg_price'][ind].toFixed(2);
                 
-                var message = '<b>Symbol:  ' + String(symbol)  + '</b><br>Invested: ' + String(invested);
+                var message = '<b>Symbol:  ' + String(symbol)  + '</b><br>Invested: $ ' + String(invested) + '</b><br>Shares: ' + String(num_shares) + '</b><br>Avg. Price: $ ' + String(avg_price);
                 div_container.text = message;
             }
             else {
