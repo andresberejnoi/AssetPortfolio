@@ -1,5 +1,12 @@
 {% extends "bootstrap/base.html" %}
 {% import "bootstrap/wtf.html" as wtf %}
+
+{% block styles %}
+{{super()}}
+    
+    {{ css_resources|indent(4)|safe }}
+{% endblock %}
+
 {% block content %}
 <div class="container">
   <h3>Enter Transactions Manually</h3>
@@ -15,6 +22,7 @@
 </div>
 {% endblock %}
 
+
 {% block scripts %}
 <script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.2.3.min.js"
         crossorigin="anonymous"></script>
@@ -22,5 +30,8 @@
         crossorigin="anonymous"></script>
 <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.2.3.min.js"
         crossorigin="anonymous"></script>
+
+        {{ js_resources|indent(4)|safe }}
 {{super()}}
 {% endblock %}
+

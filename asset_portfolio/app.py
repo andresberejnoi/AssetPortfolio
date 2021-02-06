@@ -14,9 +14,10 @@ from flask_bootstrap import Bootstrap
 #     Bokeh-Related Imports 
 from bokeh.embed import server_document, components
 from bokeh.layouts import column, row, widgetbox
-from bokeh.models import ColumnDataSource, Slider
+from bokeh.models import ColumnDataSource, Slider, CustomJS, Div
 from bokeh.models.tools import HoverTool
 from bokeh.models.widgets import Select
+from bokeh.resources import INLINE
 from bokeh.plotting import figure
 from bokeh.server.server import Server
 from bokeh.themes import Theme
@@ -42,6 +43,8 @@ from models import init_tables
 from forms import (CryptoWalletForm, RegisterBrokerForm, 
                    TransactionsForm, CheckEntryForm)
 from command_engine import command_engine
+
+
 
 #=================================================
 python_PID = os.getpid()
@@ -109,12 +112,7 @@ def get_cryptocurrency_object(crypto_symbol):
 
 @app.route("/",methods=['GET','POST'])
 def home():
-    plot_fig = histogram_holdings()
-    if plot_fig is not None:
-        script, div = components(plot_fig)
-    else:
-        script = ''
-        div    = ''
+    
     form = TransactionsForm(request.form)
     if request.method == 'POST' and form.validate_on_submit():
 
@@ -128,7 +126,7 @@ def home():
                 SYMBOL_object = Security(symbol)
                 db.session.add(SYMBOL_object)
                 db.session.commit()
-            print(f"------> {SYMBOL_object}")
+            print(f"\n\n------> {SYMBOL_object}\n\n")
             
             trans_events = tickers_dict[symbol]   #gets list of TransactionEvent objects
             for trans in trans_events:
@@ -148,10 +146,37 @@ def home():
 
         db.session.commit()
         #return redirect(url_for('home'))
-        return render_template("home.html", form=form, script=script, div=div)
-    else:
-        return render_template("home.html", form=form, script=script, div=div)
 
+        #js_resources = INLINE.render_js()
+        #css_resources = INLINE.render_css()
+        #return render_template("home.html", form=form, script=script, div=div)
+    #else:
+        #return render_template("home.html", form=form, script=script, div=div)
+
+    #================================================================
+    #================================================================
+    # This is the display portion
+    plot_fig,div_container = histogram_holdings()
+    if plot_fig is not None:
+        script, div = components(row(plot_fig,div_container))
+    else:
+        script = ''
+        div    = ''
+
+    print(f"\n\nDIV FOR BAR COUNT:\n{div}\n\n")
+    js_resources = ''  #INLINE.render_js()
+    css_resources = '' #INLINE.render_css()
+
+    # render template
+    html = render_template(
+        'home.html',
+        js_resources=js_resources,
+        css_resources=css_resources,
+        form=form,
+        script=script,
+        div=div,
+    )
+    return html
 @app.route('/wallet_registration',methods=['GET','POST'])
 def wallet_registration():
     form = CryptoWalletForm(request.form)
@@ -281,27 +306,58 @@ def histogram_holdings():
     print(by_symbol)
     #print(sec_df)
     
-
+    #=====================================================================
+    #=====================================================================
+    #Designing the Plot
+    curdoc().theme = 'dark_minimal'
     source = ColumnDataSource(data=by_symbol)
+
     plot_fig = figure(x_range=by_symbol['symbol'], y_range=(0, by_symbol['invested'].max() + 100), 
            plot_height=250, title="Money Invested per Security",
-           toolbar_location=None, tools="")
+           toolbar_location=None, tools=['hover', 'tap'], tooltips='@invested{($ 0.00 a)}')
 
-    plot_fig.vbar(x=dodge('symbol', -0.5, range=plot_fig.x_range), top='invested', width=0.4, source=source,
-       color="#c9d9d3", legend_label="Dollars Invested")
+    #plot_fig.vbar(x=dodge('symbol', -0.5, range=plot_fig.x_range), top='invested', width=0.4, source=source,
+    #   color="#c9d9d3", legend_label="Dollars Invested")
+
+    plot_fig.vbar(x=dodge('symbol',0, range=plot_fig.x_range), top='invested', width=0.8, source=source,
+       color="#c9d9d3", legend_label=f"Money Invested (Total: $ {by_symbol['invested'].sum():.2f})")
 
     plot_fig.x_range.range_padding = 0.1
     plot_fig.xgrid.grid_line_color = None
     plot_fig.legend.location = "top_left"
     plot_fig.legend.orientation = "horizontal"
-    return plot_fig
+    plot_fig.xaxis.major_label_orientation = "vertical"
+
+    div_container = Div()
+    callback1 = CustomJS(
+        args=dict(source=source, div_container=div_container), 
+        #use_strict=False,  #deprecated, do not use anymore
+        code="""
+            var ind = source.selected.indices;
+            console.log(ind);
+            if (String(ind) != '') {
+                var symbol   = source.data['symbol'][ind].toUpperCase();
+                var invested = source.data['invested'][ind];
+                
+                var message = '<b>Symbol:  ' + String(symbol)  + '</b><br>Invested: ' + String(invested);
+                div_container.text = message;
+            }
+            else {
+                div_container.text = '';
+            }
+        """)
+
+    plot_fig.js_on_event('tap', callback1)
+
+    #return plot_fig
+    #return row(plot_fig,div_container)
+    return plot_fig,div_container
 
 @app.route('/bkapp', methods=['GET'])
 def bkapp_page():
     script = server_document('http://localhost:5006/bkapp')
     print(f"Here is the script:\n\n{script}\n\n")
     return render_template("embed.html", script=script, template="Flask")#, relative_urls=False)
-
 
 def bk_worker():
     # Can't pass num_procs > 1 in this configuration. If you need to run multiple
