@@ -232,6 +232,9 @@ def check_entries():
         elif table_to_show == '4': #'wallets':
             df = pd.read_sql(sql=db.session.query(CryptoWallet).statement,con=db.session.bind)
         
+        elif table_to_show == '5': #'events':  
+            df = pd.read_sql(sql=db.session.query(Event).statement,con=db.session.bind)
+            
         #-----determine how many rows to show
         rows_to_show = form.rows_to_show.data
         if rows_to_show == 'all':
@@ -298,15 +301,15 @@ def histogram_holdings():
     by_symbol = trans_df.groupby('symbol_id')
     by_symbol = by_symbol[['num_shares','invested']].sum().reset_index()
     by_symbol['avg_price'] = by_symbol['invested'] / by_symbol['num_shares']
-    print(by_symbol)
+    #print(by_symbol)
     #print(sec_df)
     #by_symbol['symbol'] = sec_df.loc[by_symbol['symbol_id']==sec_df['id']]['symbol']
     by_symbol['symbol'] = by_symbol['symbol_id'].copy()
     by_symbol = by_symbol.replace({'symbol':id_to_symbol_mapping})
     
     #by_symbol = by_symbol[['symbol','invested']]
-    print(id_to_symbol_mapping)
-    print(by_symbol)
+    #print(id_to_symbol_mapping)
+    #print(by_symbol)
     #print(sec_df)
     
     #=====================================================================

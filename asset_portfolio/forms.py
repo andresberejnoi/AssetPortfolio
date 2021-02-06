@@ -19,6 +19,6 @@ class RegisterBrokerForm(FlaskForm):
     submit = SubmitField('Submit')
 
 class CheckEntryForm(FlaskForm):
-    table = SelectField('Table',choices=[(0,'securities'),(1,'transactions'),(2,'brokers'),(3,'crypto'),(4,'wallets')])
+    table = SelectField('Table',choices=[(0,'securities'),(1,'transactions'),(2,'brokers'),(3,'crypto'),(4,'wallets'),(5,'events')])
     rows_to_show = StringField('Rows to Show (from latest; default: all)',default='all')
     submit = SubmitField('Submit')
