@@ -10,7 +10,7 @@ class Security(db.Model):
     
     id           = db.Column(db.Integer,db.Sequence('securities_id_seq'),primary_key=True)
     symbol       = db.Column(db.String(32), nullable=False, unique=True)
-    instrument   = db.Column(db.String(64))
+    instrument_type   = db.Column(db.String(64))
     name         = db.Column(db.String(255))
     sector       = db.Column(db.String(255))
     currency     = db.Column(db.String(32))
@@ -19,12 +19,20 @@ class Security(db.Model):
     transactions = db.relationship('Transaction',backref='securities',lazy=True)
     events       = db.relationship('Event'      ,backref='securities',lazy=True)
     
-    def __init__(self,symbol,instrument='',name='',sector='',currency='USD'):
+    def __init__(self,symbol,instrument_type=None,name=None,sector=None,currency=None):
         self.symbol   = symbol
-        self.currency = currency
+
+        if instrument_type is not None:
+            self.instrument_type = instrument_type
+        if name is not None:
+            self.name = name 
+        if sector is not None:
+            self.sector = sector
+        if currency is not None:
+            self.currency = currency
 
     def __repr__(self):
-        return f"< Security: ticker={self.symbol}, instrument={self.instrument}, name={self.name}, currency={self.currency} >"
+        return f"< Security: ticker={self.symbol}, instrument={self.instrument_type}, name={self.name}, currency={self.currency} >"
 
 class Transaction(db.Model):
     __tablename__ = 'transactions'
