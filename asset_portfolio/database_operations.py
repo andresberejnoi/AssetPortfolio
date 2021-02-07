@@ -14,23 +14,8 @@ from models import (Security, Transaction, Broker,
 
 from types import SimpleNamespace
 
-from tools import unix_to_datetime
+from tools import unix_to_datetime, yf_flags
 #=================================================
-
-
-yf_flags = SimpleNamespace(
-    FLAG_SECURITY_TYPE     = 'quoteType',
-    FLAG_SECTOR            = 'sector',
-    FLAG_CURRENCY          = 'currency',
-    FLAG_NAME              = 'shortName',
-    FLAG_SYMBOL            = 'symbol',
-    FLAG_EXDIV_DATE        = 'exDividendDate',
-    FLAG_LAST_SPLIT_DATE   = 'lastSplitDate',
-    FLAG_LAST_SPLIT_FACTOR = 'lastSplitFactor',
-    FLAG_LAST_DIV_AMOUNT   = 'lastDividendValue',
-    FLAG_GMT_OFFSET_MILLI  = 'gmtOffSetMilliseconds',
-    FLAG_EXCHANGE_TIMEZONE = 'exchangeTimezoneShortName',
-)
 
 def get_symbols_dict(db):
     sec_dict = dict(db.session.query(Security.symbol,Security.id).all())

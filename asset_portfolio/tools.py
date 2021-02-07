@@ -1,5 +1,20 @@
 """Collection of tools to use in different situations"""
 from datetime import datetime
+from types import SimpleNamespace
+
+yf_flags = SimpleNamespace(
+    FLAG_INSTRUMENT_TYPE     = 'quoteType',
+    FLAG_SECTOR              = 'sector',
+    FLAG_CURRENCY            = 'currency',
+    FLAG_NAME                = 'shortName',
+    FLAG_SYMBOL              = 'symbol',
+    FLAG_EXDIV_DATE          = 'exDividendDate',
+    FLAG_LAST_SPLIT_DATE     = 'lastSplitDate',
+    FLAG_LAST_SPLIT_FACTOR   = 'lastSplitFactor',
+    FLAG_LAST_DIV_AMOUNT     = 'lastDividendValue',
+    FLAG_GMT_OFFSET_MILLI    = 'gmtOffSetMilliseconds',
+    FLAG_EXCHANGE_TIMEZONE   = 'exchangeTimezoneShortName',
+)
 
 
 def _get_str_dict(dict_object,depth_level):
