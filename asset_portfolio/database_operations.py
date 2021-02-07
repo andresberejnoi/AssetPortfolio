@@ -45,7 +45,8 @@ def get_split_event(symbol):
         event_date   = None,
     )
     
-    split_factor = ticker.info[yf_flags.FLAG_LAST_SPLIT_FACTOR]
+    print(f"\nSymbol: {symbol}")
+    split_factor = ticker.info.get(yf_flags.FLAG_LAST_SPLIT_FACTOR,None)
     if split_factor is None:
         return event
     
@@ -58,16 +59,16 @@ def get_split_event(symbol):
         else:
             event_type = 'reverse_split'
         
-        event_date = ticker.info[yf_flags.FLAG_LAST_SPLIT_DATE]
+        event_date = ticker.info.get(yf_flags.FLAG_LAST_SPLIT_DATE,None)
         event_date = unix_to_datetime(event_date)
         
     event.split_factor = split_factor
     event.event_type   = event_type
     event.event_date   = event_date
     
-    print(event)
+    #print(event)
     #share_text = 'share' if new_amount 
-    print(f"{old_amount} share turns into {new_amount}")
+    #print(f"{old_amount} share turns into {new_amount}")
     return event
 
 def events_table_updater(db):
@@ -75,6 +76,8 @@ def events_table_updater(db):
     
     for symbol in sec_dict:
         event = get_split_event(symbol)
+        if event.event_date is None:
+            continue
 
         #get the security object for that symbol
         SEC_object = db.session.query(Security).filter(Security.symbol==symbol).first()
@@ -94,11 +97,11 @@ def events_table_updater(db):
             if new_event.event_date > TRANS_object.time_execution:
                 SEC_object.events.append(new_event)
                 db.session.add(new_event)
-                db.session.commit()
+                print(f"\nSymbol: {SEC_object.symbol.upper()}\n--> ADDED Event \n\t<{new_event}>")
         else:
             print(f"\nSymbol: {SEC_object.symbol.upper()}\n--> Event <{new_event}> already exists in database \n\tor happened before first transaction\n")
 
-
+    db.session.commit()
     #tickers = yf.Tickers(sec_dict.keys())
 
 if __name__ == '__main__':
