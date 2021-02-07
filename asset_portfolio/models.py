@@ -14,9 +14,10 @@ class Security(db.Model):
     name         = db.Column(db.String(255))
     sector       = db.Column(db.String(255))
     currency     = db.Column(db.String(32))
-    date_created = db.Column(db.DateTime, server_default=db.func.now())
+    #date_created = db.Column(db.DateTime, server_default=db.func.now())
     last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     transactions = db.relationship('Transaction',backref='securities',lazy=True)
+    events       = db.relationship('Event'      ,backref='securities',lazy=True)
     
     def __init__(self,symbol,instrument='',name='',sector='',currency='USD'):
         self.symbol   = symbol
@@ -39,8 +40,8 @@ class Transaction(db.Model):
     last_updated   = db.Column(db.DateTime,server_default=db.func.now(), onupdate=db.func.now(),       nullable=True)
     
 
-    def __init__(self,symbol,num_shares,cost_basis,is_dividend=False,broker_id=1,time_execution=None):
-        self.symbol      = symbol.upper()
+    def __init__(self,num_shares,cost_basis,is_dividend=False,broker_id=1,time_execution=None):
+        #self.symbol      = symbol.upper()
         self.num_shares  = num_shares
         self.cost_basis  = cost_basis
         self.is_dividend = is_dividend
@@ -50,7 +51,7 @@ class Transaction(db.Model):
             self.time_execution = time_execution      #if it is None, the server will apply the current time, as indicated above in the setup
 
     def __repr__(self):
-        return f"<Transaction: symbol={self.symbol} num_shares={self.num_shares} cost_basis={self.cost_basis} is_dividend={self.is_dividend}>"
+        return f"<Transaction: symbol_id={self.symbol_id} num_shares={self.num_shares} cost_basis={self.cost_basis} is_dividend={self.is_dividend} time_execution={self.time_execution}>"
 
 class Broker(db.Model):
     __tablename__ = 'brokers'
@@ -74,11 +75,25 @@ class Event(db.Model):
     id           = db.Column(db.Integer,db.Sequence('securities_events_id_seq'),primary_key=True)
     symbol_id    = db.Column(db.Integer, db.ForeignKey('securities.id'),  nullable=False)
     event_type   = db.Column(db.String(64), nullable=False) 
+    split_factor = db.Column(db.String(16),nullable=True)  #only required for split events. I think this table will contain dividend cuts and raises as well
+    dividend_change = db.Column(db.Numeric(19,5, asdecimal=True),nullable=True)
     event_date   = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
     last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
  
+    def __init__(self,event_type,event_date,**kwargs):
+        self.event_type = event_type
+        self.event_date = event_date
+        split_factor = kwargs.get('split_factor',None)
+        dividend_change = kwargs.get('dividend_change',None)
+
+        if split_factor is not None:
+            self.split_factor = split_factor 
+        if dividend_change is not None:
+            self.dividend_change = dividend_change
+
     def __repr__(self):
-        return f"< Event: symbol_id={self.symbol_id} event_type={self.event_type} event_date={self.event_date}"
+        return f"< Event: symbol_id={self.symbol_id} event_type={self.event_type} event_date={self.event_date} split_factor={self.split_factor} dividend_change={self.dividend_change}"
+
 
 class CryptoCurrency(db.Model):
     __tablename__ = 'cryptocurrencies'
