@@ -24,7 +24,7 @@ class Security(db.Model):
         self.currency = currency
 
     def __repr__(self):
-        return f"Security(ticker={self.symbol}, instrument={self.instrument}, name={self.name}, currency={self.currency})"
+        return f"< Security: ticker={self.symbol}, instrument={self.instrument}, name={self.name}, currency={self.currency} >"
 
 class Transaction(db.Model):
     __tablename__ = 'transactions'
@@ -68,17 +68,17 @@ class Broker(db.Model):
             self.website = website
 
     def __repr__(self):
-        return f"< Broker: name={self.name} website={self.website}"
+        return f"< Broker: name={self.name} website={self.website} >"
 
 class Event(db.Model):
     __tablename__ = 'securities_events'
-    id           = db.Column(db.Integer,db.Sequence('securities_events_id_seq'),primary_key=True)
-    symbol_id    = db.Column(db.Integer, db.ForeignKey('securities.id'),  nullable=False)
-    event_type   = db.Column(db.String(64), nullable=False) 
-    split_factor = db.Column(db.String(16),nullable=True)  #only required for split events. I think this table will contain dividend cuts and raises as well
+    id              = db.Column(db.Integer,db.Sequence('securities_events_id_seq'),primary_key=True)
+    symbol_id       = db.Column(db.Integer, db.ForeignKey('securities.id'),  nullable=False)
+    event_type      = db.Column(db.String(64), nullable=False) 
+    split_factor    = db.Column(db.String(16),nullable=True)  #only required for split events. I think this table will contain dividend cuts and raises as well
     dividend_change = db.Column(db.Numeric(19,5, asdecimal=True),nullable=True)
-    event_date   = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
-    last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    event_date      = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
+    last_updated    = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
  
     def __init__(self,event_type,event_date,**kwargs):
         self.event_type = event_type
@@ -92,7 +92,7 @@ class Event(db.Model):
             self.dividend_change = dividend_change
 
     def __repr__(self):
-        return f"< Event: symbol_id={self.symbol_id} event_type={self.event_type} event_date={self.event_date} split_factor={self.split_factor} dividend_change={self.dividend_change}"
+        return f"< Event: symbol_id={self.symbol_id} event_type={self.event_type} event_date={self.event_date} split_factor={self.split_factor} dividend_change={self.dividend_change} >"
 
 
 class CryptoCurrency(db.Model):
