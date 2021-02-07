@@ -73,19 +73,19 @@ with app.app_context():
 #init_tables(db)
 #class Symbols(db.Model):
 CRYPTO_SYMBOL_TO_NAME = {
-    'btc':'Bitcoin',
-    'eth':'Ethereum',
-    'ltc':'Litecoin',
-    'xrp':'Ripple',
-    'ada':'Cardano',
+    'btc' :'Bitcoin',
+    'eth' :'Ethereum',
+    'ltc' :'Litecoin',
+    'xrp' :'Ripple',
+    'ada' :'Cardano',
     'usdc':'USD Coin',
-    'neo':'Neo',
+    'neo' :'Neo',
     'usdt':'USD Tether',
     'link':'Chainlink',
-    'dot':'Polkadot',
-    'bnb':'Binance Coin',
-    'bch':'Bitcoin Cash',
-    'xlm':'Stellar'
+    'dot' :'Polkadot',
+    'bnb' :'Binance Coin',
+    'bch' :'Bitcoin Cash',
+    'xlm' :'Stellar'
 }
 
 def get_crypto_name(symbol):
@@ -132,7 +132,7 @@ def home():
             for trans in trans_events:
                 BROKER_object = get_Broker_object(trans.broker)
                 TRANS_object = Transaction(
-                    trans.ticker, 
+                    #trans.ticker, 
                     trans.amount, 
                     trans.cost_basis, 
                     trans.is_dividend(),
@@ -156,9 +156,11 @@ def home():
     #================================================================
     #================================================================
     # This is the display portion
-    plot_fig,div_container = histogram_holdings()
+    #plot_fig,div_container = histogram_holdings()
+    plot_fig = histogram_holdings()
     if plot_fig is not None:
-        script, div = components(row(plot_fig,div_container))
+        #script, div = components(row(plot_fig,div_container))
+        script, div = components(plot_fig)
     else:
         script = ''
         div    = ''
@@ -234,7 +236,7 @@ def check_entries():
         
         elif table_to_show == '5': #'events':  
             df = pd.read_sql(sql=db.session.query(Event).statement,con=db.session.bind)
-            
+
         #-----determine how many rows to show
         rows_to_show = form.rows_to_show.data
         if rows_to_show == 'all':
@@ -301,17 +303,11 @@ def histogram_holdings():
     by_symbol = trans_df.groupby('symbol_id')
     by_symbol = by_symbol[['num_shares','invested']].sum().reset_index()
     by_symbol['avg_price'] = by_symbol['invested'] / by_symbol['num_shares']
-    #print(by_symbol)
-    #print(sec_df)
+
     #by_symbol['symbol'] = sec_df.loc[by_symbol['symbol_id']==sec_df['id']]['symbol']
     by_symbol['symbol'] = by_symbol['symbol_id'].copy()
     by_symbol = by_symbol.replace({'symbol':id_to_symbol_mapping})
-    
-    #by_symbol = by_symbol[['symbol','invested']]
-    #print(id_to_symbol_mapping)
-    #print(by_symbol)
-    #print(sec_df)
-    
+
     #=====================================================================
     #=====================================================================
     #Designing the Plot
@@ -321,7 +317,7 @@ def histogram_holdings():
     plot_fig = figure(x_range=by_symbol['symbol'], y_range=(0, by_symbol['invested'].max() + 100), 
             plot_height=250, title="Money Invested per Security",
             toolbar_location=None, 
-            tools=[ 'tap'], 
+            tools=['tap'], 
     )
     hover_tools = HoverTool(
         tooltips=[
@@ -372,8 +368,8 @@ def histogram_holdings():
     plot_fig.js_on_event('tap', callback1)
 
     #return plot_fig
-    #return row(plot_fig,div_container)
-    return plot_fig,div_container
+    return row(plot_fig,div_container)
+    #return plot_fig,div_container
 
 @app.route('/bkapp', methods=['GET'])
 def bkapp_page():
