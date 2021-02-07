@@ -2,6 +2,7 @@ import os
 import datetime 
 import pandas as pd
 
+import yfinance as yf
 
 #============================================
 #     Flask Related Import
@@ -44,10 +45,8 @@ from forms import (CryptoWalletForm, RegisterBrokerForm,
                    TransactionsForm, CheckEntryForm)
 from command_engine import command_engine
 
+from tools import yf_flags
 
-
-#=================================================
-python_PID = os.getpid()
 #=================================================
 #Here we define a database connection
 project_dir  = os.path.dirname(os.path.abspath(__file__))
@@ -109,6 +108,19 @@ def get_cryptocurrency_object(crypto_symbol):
         db.session.commit()
     return crypto_object
 
+def create_new_security_object(symbol):
+    ticker = yf.Ticker(symbol)
+    instrument_type = ticker.info.get(yf_flags.FLAG_INSTRUMENT_TYPE,None)
+    company_name    = ticker.info.get(yf_flags.FLAG_NAME,None)
+    sector          = ticker.info.get(yf_flags.FLAG_SECTOR,None)
+    currency        = ticker.info.get(yf_flags.FLAG_CURRENCY,'USD')
+
+    new_sec = Security(symbol,
+                       instrument_type=instrument_type,
+                       name=company_name,
+                       sector=sector,
+                       currency=currency)
+    return new_sec
 
 @app.route("/",methods=['GET','POST'])
 def home():
@@ -123,10 +135,10 @@ def home():
         for symbol in tickers_dict:
             SYMBOL_object = Security.query.filter(Security.symbol==symbol).first()     #without .first() the return is a query object
             if SYMBOL_object is None:
-                SYMBOL_object = Security(symbol)
+                SYMBOL_object = create_new_security_object(symbol)
                 db.session.add(SYMBOL_object)
                 db.session.commit()
-            print(f"\n\n------> {SYMBOL_object}\n\n")
+            print(f"\n\n--> {SYMBOL_object}\n\n")
             
             trans_events = tickers_dict[symbol]   #gets list of TransactionEvent objects
             for trans in trans_events:
@@ -207,9 +219,9 @@ def register_broker():
         db.session.add(BROKER_object)
         db.session.commit()
 
-        return redirect(url_for('home'))
-    else:
-        return render_template('register_broker.html',form=form)
+    #    return redirect(url_for('home'))
+    #else:
+    return render_template('register_broker.html',form=form)
 
 @app.route('/check_entries',methods=['GET','POST'])
 def check_entries():
@@ -220,22 +232,25 @@ def check_entries():
         table_to_show = form.table.data 
         #print(f"\n\nTable name chosen: {table_to_show}, type={type(table_to_show)}\n\n")
         if table_to_show == '0': #'securities':
-            df = pd.read_sql(sql=db.session.query(Security).statement,con=db.session.bind) 
+            sql_statement = db.session.query(Security).statement
 
         elif table_to_show == '1': #'transactions':
-            df = pd.read_sql(sql=db.session.query(Transaction).statement,con=db.session.bind)
+            sql_statement =db.session.query(Transaction).statement
 
         elif table_to_show == '2': #'brokers':
-            df = pd.read_sql(sql=db.session.query(Broker).statement,con=db.session.bind)
+            sql_statement = db.session.query(Broker).statement
 
         elif table_to_show == '3': #'crypto':
-            df = pd.read_sql(sql=db.session.query(CryptoCurrency).statement,con=db.session.bind)
+            sql_statement = db.session.query(CryptoCurrency).statement
 
         elif table_to_show == '4': #'wallets':
-            df = pd.read_sql(sql=db.session.query(CryptoWallet).statement,con=db.session.bind)
+            sql_statement = db.session.query(CryptoWallet).statement
         
         elif table_to_show == '5': #'events':  
-            df = pd.read_sql(sql=db.session.query(Event).statement,con=db.session.bind)
+            sql_statement = db.session.query(Event).statement
+
+        #=====GET DATAFRAME FROM DATABASE
+        df = pd.read_sql(sql=sql_statement,con=db.session.bind)
 
         #-----determine how many rows to show
         rows_to_show = form.rows_to_show.data
@@ -248,7 +263,7 @@ def check_entries():
                 num_rows = len(df)
         #--------
 
-        tables=[df.tail(num_rows).to_html(classes='mystyle')]
+        tables=[df.tail(num_rows).to_html(classes='mystyle',index=False)]
         titles=df.columns.values
         return render_template('check_entries.html',form=form,tables=tables,titles=titles)
     else:
