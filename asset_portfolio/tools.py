@@ -1,5 +1,5 @@
 """Collection of tools to use in different situations"""
-
+from datetime import datetime
 
 
 def _get_str_dict(dict_object,depth_level):
@@ -26,3 +26,19 @@ def pprint_dict(dict_object):
     depth = 0
     str_dict = _get_str_dict(dict_object,depth)
     return str_dict
+
+def unix_to_datetime(unix_timestamp):
+    dt = datetime.fromtimestamp(unix_timestamp)
+    return dt
+
+def get_split_multiplier(ratio_str):
+    '''ratio or factor is assumed in the form of a string as:
+                    "4:1"
+     which means one share splits into 4
+    '''
+    factors_split = ratio_str.split(':')
+    new_amount = int(factors_split[0])
+    old_amount = int(factors_split[1])
+    multiplier = new_amount / old_amount
+    
+    return multiplier
