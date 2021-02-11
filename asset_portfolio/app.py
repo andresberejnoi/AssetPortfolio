@@ -329,7 +329,7 @@ def histogram_holdings():
     curdoc().theme = 'dark_minimal'
     source = ColumnDataSource(data=by_symbol)
 
-    plot_fig = figure(x_range=by_symbol['symbol'], y_range=(0, by_symbol['invested'].max() + 100), 
+    plot_fig = figure(x_range=by_symbol['symbol'], y_range=(0, by_symbol['invested'].max() + 200), 
             plot_height=250, title="Money Invested per Security",
             toolbar_location=None, 
             tools=['tap'], 
