@@ -87,15 +87,37 @@ CRYPTO_SYMBOL_TO_NAME = {
     'xlm' :'Stellar'
 }
 
+BROKER_ALIASES_DICT = {
+    'robinhood':['robinhood','robin','hood','robinhood.com','rb'],
+    'shareowner':['shareowner','shareowneronline','shareowner_online','shareowner online','shareowneronline.com','soo','so',],
+    'schwab':['schwab','charles','charles schwab','schwab.com','cs','shb'],
+    'td Ameritrade':['td','ameritrade','thinkorswim','tdameritrade','td_ameritrade','tdameritrade.com','td ameritrade'],
+}
+
 def get_crypto_name(symbol):
     name = CRYPTO_SYMBOL_TO_NAME.get(symbol,'Unknown')
     return name
 
+def get_broker_name(broker_name):
+    broker_name = broker_name.lower()
+
+    for key in BROKER_ALIASES_DICT:
+        aliases = BROKER_ALIASES_DICT[key]
+        if broker_name in aliases:
+            return key
+    
+    return broker_name    #we only get to this point if the broker name is not recognized as a valid alias.
+
 def get_Broker_object(broker_name):
     broker_name = broker_name.strip().lower()   #keep everything lowercase and stripped
+    broker_name = get_broker_name(broker_name)  #matches user-provided broker value with what exists in the database
+
     broker = Broker.query.filter(Broker.name==broker_name).first()
     if broker is None:
-        raise ValueError(f"\n--> Broker of name '{broker_name}' is not registered")
+        #creates broker and registers it in the database
+        broker = create_new_broker_object(broker_name)
+        db.session.add(broker)
+        db.session.commit()
     return broker
 
 def get_cryptocurrency_object(crypto_symbol):
@@ -122,6 +144,11 @@ def create_new_security_object(symbol):
                        currency=currency)
     return new_sec
 
+def create_new_broker_object(broker_name,website=''):
+    '''Creates broker object based on broker_name'''
+    broker = Broker(broker_name,website)
+    return broker
+    
 @app.route("/",methods=['GET','POST'])
 def home():
     
