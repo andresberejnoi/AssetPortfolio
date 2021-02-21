@@ -218,6 +218,7 @@ def home():
         div=div,
     )
     return html
+    
 @app.route('/wallet_registration',methods=['GET','POST'])
 def wallet_registration():
     form = CryptoWalletForm(request.form)
