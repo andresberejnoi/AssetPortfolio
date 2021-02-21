@@ -7,3 +7,4 @@ pystore/
 *.txt
 asset_portfolio/*.db
 asset_portfolio/_flask_PID
+asset_portfolio/env.py
