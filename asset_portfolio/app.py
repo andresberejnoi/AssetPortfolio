@@ -84,7 +84,8 @@ CRYPTO_SYMBOL_TO_NAME = {
     'dot' :'Polkadot',
     'bnb' :'Binance Coin',
     'bch' :'Bitcoin Cash',
-    'xlm' :'Stellar'
+    'xlm' :'Stellar',
+    'nav' :'NavCoin',
 }
 
 BROKER_ALIASES_DICT = {
@@ -218,7 +219,7 @@ def home():
         div=div,
     )
     return html
-    
+
 @app.route('/wallet_registration',methods=['GET','POST'])
 def wallet_registration():
     form = CryptoWalletForm(request.form)
