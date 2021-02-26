@@ -1,0 +1,27 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block styles %}
+{{super()}}
+<link rel="stylesheet" type='text/css'
+      href="{{ url_for('static',filename='styles/df_style.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h3>Security Holdings Separated by Holding Period</h3>
+
+  <h4>Long Term Holdings (over 366 days)</h4>
+  {% for table in tables_long_term %}
+            {{titles_long_term[loop.index]}}
+            {{ table|safe }}
+  {% endfor %}
+
+  <h4>Short Term Holdings (less than 366 days)</h4>
+  {% for table in tables_short_term %}
+            {{titles_short_term[loop.index]}}
+            {{ table|safe }}
+  {% endfor %}
+  <p><a href="{{ url_for('home') }}">back home</a></p>
+</div>
+{% endblock %}
