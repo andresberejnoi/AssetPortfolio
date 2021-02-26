@@ -193,32 +193,45 @@ def home():
     #else:
         #return render_template("home.html", form=form, script=script, div=div)
 
-    #================================================================
-    #================================================================
-    # This is the display portion
-    #plot_fig,div_container = histogram_holdings()
-    plot_fig = histogram_holdings()
-    if plot_fig is not None:
-        #script, div = components(row(plot_fig,div_container))
-        script, div = components(plot_fig)
+        #================================================================
+        #================================================================
+        # This is the display portion
+        plot_fig = histogram_holdings()
+        if plot_fig is not None:
+            script, div = components(plot_fig)
+        else:
+            script = ''
+            div    = ''
+        js_resources = ''  #INLINE.render_js()
+        css_resources = '' #INLINE.render_css()
+
+        return redirect(url_for("home",
+                                js_resources=js_resources,
+                                css_resources=css_resources,
+                                form=form,
+                                script=script,
+                                div=div,))
     else:
-        script = ''
-        div    = ''
-
-    print(f"\n\nDIV FOR BAR COUNT:\n{div}\n\n")
-    js_resources = ''  #INLINE.render_js()
-    css_resources = '' #INLINE.render_css()
-
-    # render template
-    html = render_template(
-        'home.html',
-        js_resources=js_resources,
-        css_resources=css_resources,
-        form=form,
-        script=script,
-        div=div,
-    )
-    return html
+        # This is the display portion
+        plot_fig = histogram_holdings()
+        if plot_fig is not None:
+            script, div = components(plot_fig)
+        else:
+            script = ''
+            div    = ''
+        js_resources = ''  #INLINE.render_js()
+        css_resources = '' #INLINE.render_css()
+        
+        # render template
+        html = render_template(
+            'home.html',
+            js_resources=js_resources,
+            css_resources=css_resources,
+            form=form,
+            script=script,
+            div=div,
+        )
+        return html
 
 @app.route('/wallet_registration',methods=['GET','POST'])
 def wallet_registration():
