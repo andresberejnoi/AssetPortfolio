@@ -1,6 +1,8 @@
 """Collection of tools to use in different situations"""
 from datetime import datetime
 from types import SimpleNamespace
+from models import (Security, Transaction, Broker, 
+                    Event, CryptoCurrency, CryptoWallet)
 
 yf_flags = SimpleNamespace(
     FLAG_INSTRUMENT_TYPE     = 'quoteType',
@@ -57,3 +59,11 @@ def get_split_multiplier(ratio_str):
     multiplier = new_amount / old_amount
     
     return multiplier
+
+def get_symbol_to_id_dict(db):
+    sec_dict = dict(db.session.query(Security.symbol,Security.id).all())
+    return sec_dict
+
+def get_id_to_symbol_dict(db):
+    sec_dict = dict(db.session.query(Security.id,Security.symbol).all())
+    return sec_dict
