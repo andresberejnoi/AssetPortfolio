@@ -45,7 +45,7 @@ from forms import (CryptoWalletForm, RegisterBrokerForm,
                    TransactionsForm, CheckEntryForm)
 from command_engine import command_engine
 
-from tools import yf_flags
+from tools import yf_flags, get_id_to_symbol_dict
 
 #=================================================
 #Here we define a database connection
@@ -86,6 +86,8 @@ CRYPTO_SYMBOL_TO_NAME = {
     'bch' :'Bitcoin Cash',
     'xlm' :'Stellar',
     'nav' :'NavCoin',
+    'vtc' :'Vertcoin',
+    'doge':'DogeCoin',
 }
 
 BROKER_ALIASES_DICT = {
@@ -221,7 +223,7 @@ def home():
             div    = ''
         js_resources = ''  #INLINE.render_js()
         css_resources = '' #INLINE.render_css()
-        
+
         # render template
         html = render_template(
             'home.html',
@@ -232,6 +234,37 @@ def home():
             div=div,
         )
         return html
+
+@app.route("/holdings")
+def holdings():
+    sql_statement = db.session.query(Transaction).statement 
+    df = pd.read_sql(sql=sql_statement,con=db.session.bind)
+
+    long_term_start = datetime.datetime.utcnow() - datetime.timedelta(days=366)
+    long_term_df  = df[df['time_execution']<=long_term_start]
+    short_term_df = df[df['time_execution']>long_term_start]
+    
+    #sum up all the shares; cost basis and others are not needed right now, but I think they should be added eventually
+    long_term_df  = long_term_df[['symbol_id','num_shares']].groupby('symbol_id').sum().reset_index()
+    short_term_df = short_term_df[['symbol_id','num_shares']].groupby('symbol_id').sum().reset_index()
+
+    #replacing symbol IDs with the corresponding symbol
+    id_symbols_dict = get_id_to_symbol_dict(db)
+    long_term_df  = long_term_df.replace({'symbol_id':id_symbols_dict})
+    short_term_df = short_term_df.replace({'symbol_id':id_symbols_dict})
+    
+    #setting up the values to send back
+    tables_long_term = [long_term_df.to_html(classes='mystyle',index=False),]
+    tables_short_term = [short_term_df.to_html(classes='mystyle',index=False),]
+    
+    titles_long_term  = long_term_df.columns.values
+    titles_short_term = short_term_df.columns.values
+
+    return render_template('holdings.html',
+                           tables_long_term=tables_long_term,
+                           titles_long_term=titles_long_term,
+                           tables_short_term=tables_short_term,
+                           titles_short_term=titles_short_term,)
 
 @app.route('/wallet_registration',methods=['GET','POST'])
 def wallet_registration():
