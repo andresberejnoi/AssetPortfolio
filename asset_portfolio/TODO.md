@@ -4,11 +4,17 @@ Here I will list the things I hope to get done by the next version of the projec
 
 - Create official variable for current version, such as `__version__`
 
+- Create Login interface so that the system can support multiple users and protect my data from unauthorized usage.
+
+- Forms should refresh after submitting data
+    - Right now, if I enter transactions and then hit the submit button, the data gets sent to the server correctly, but if I press refresh on the page, that same data gets sent again. This should not happen. 
+
 - Crypto address tracker implemented:
     - Allows to enter address to track
     - User can indicate if address is his/her own or if it is just for watching (keep this outside the database so that it can be changed at any moment) but it will not be required to enter that information. 
     - Shows current balance in address
     - Can show total transactions in address
+    - Implement support for ERC-20 and ERC-721 tokens on the Ethereum blockchain
 
 - Add more Graphs to the site
     - Modify the plot on main page so that it runs a proper embeded Bokeh server (only if necessary)

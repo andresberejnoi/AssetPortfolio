@@ -89,9 +89,9 @@ CRYPTO_SYMBOL_TO_NAME = {
 }
 
 BROKER_ALIASES_DICT = {
-    'robinhood':['robinhood','robin','hood','robinhood.com','rb'],
-    'shareowner':['shareowner','shareowneronline','shareowner_online','shareowner online','shareowneronline.com','soo','so',],
-    'schwab':['schwab','charles','charles schwab','schwab.com','cs','shb'],
+    'robinhood'    :['robinhood','robin','hood','robinhood.com','rb'],
+    'shareowner'   :['shareowner','shareowneronline','shareowner_online','shareowner online','shareowneronline.com','soo','so',],
+    'schwab'       :['schwab','charles','charles schwab','schwab.com','cs','shb'],
     'td Ameritrade':['td','ameritrade','thinkorswim','tdameritrade','td_ameritrade','tdameritrade.com','td ameritrade'],
 }
 
