@@ -1,4 +1,5 @@
 """Collection of tools to use in different situations"""
+import pandas as pd
 from datetime import datetime
 from types import SimpleNamespace
 from models import (Security, Transaction, Broker, 
@@ -67,3 +68,16 @@ def get_symbol_to_id_dict(db):
 def get_id_to_symbol_dict(db):
     sec_dict = dict(db.session.query(Security.id,Security.symbol).all())
     return sec_dict
+
+
+def get_split_events_df(db):
+    sql_statement = db.session.query(
+                        Event.event_date, 
+                        Event.symbol_id, 
+                        Event.split_factor,
+                        ).filter(
+                            Event.event_type=='split' or Event.event_type=='reverse_split'
+                        ).statement
+
+    df = pd.read_sql(sql=sql_statement,con=db.session.bind)
+    return df
