@@ -43,13 +43,12 @@ def events_table_updater(db):
                 #link event to security
                 SEC_object.events.append(EVENT_obj)
                 db.session.add(EVENT_obj)
-            
+
+                print(f"\nSymbol: {SEC_object.symbol.upper()}\n--> Added:\n{EVENT_obj}")
             else:
-                print(f"\nSymbol: {SEC_object.symbol.upper()}\n--> Event <{existing_match}> already exists in database \n\tor happened before first transaction\n")
+                print(f"\nSymbol: {SEC_object.symbol.upper()}\n--> <{existing_match}> already exists in database")
 
-        print(f"\nSymbol: {SEC_object.symbol.upper()}\n--> ADDED Events \n\t<{events_df}>")
     db.session.commit()
-
 
 if __name__ == '__main__':
     #Here we define a database connection
