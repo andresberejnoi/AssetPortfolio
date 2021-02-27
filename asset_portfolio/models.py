@@ -83,7 +83,7 @@ class Event(db.Model):
     id              = db.Column(db.Integer,db.Sequence('securities_events_id_seq'),primary_key=True)
     symbol_id       = db.Column(db.Integer, db.ForeignKey('securities.id'),  nullable=False)
     event_type      = db.Column(db.String(64), nullable=False) 
-    split_factor    = db.Column(db.String(16),nullable=True)  #only required for split events. I think this table will contain dividend cuts and raises as well
+    split_factor    = db.Column(db.Numeric(19,10),nullable=True)  #only required for split events. I think this table will contain dividend cuts and raises as well
     dividend_change = db.Column(db.Numeric(19,5, asdecimal=True),nullable=True)
     event_date      = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
     last_updated    = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
