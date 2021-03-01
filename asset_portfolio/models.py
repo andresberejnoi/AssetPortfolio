@@ -18,6 +18,7 @@ class Security(db.Model):
     last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     transactions = db.relationship('Transaction',backref='securities',lazy=True)
     events       = db.relationship('Event'      ,backref='securities',lazy=True)
+    positions    = db.relationship('Position'   ,backref='securities',lazy=True)
     
     def __init__(self,symbol,instrument_type=None,name=None,sector=None,currency=None):
         self.symbol   = symbol
@@ -102,6 +103,42 @@ class Event(db.Model):
     def __repr__(self):
         return f"< Event: symbol_id={self.symbol_id} event_type={self.event_type} event_date={self.event_date} split_factor={self.split_factor} dividend_change={self.dividend_change} >"
 
+class Position(db.Model):
+    __tablename__ = 'security_positions'
+    id               = db.Column(db.Integer,db.Sequence('securities_positions_id_seq'),primary_key=True)
+    symbol_id        = db.Column(db.Integer, db.ForeignKey('securities.id'),  nullable=False)
+    total_shares     = db.Column(db.Numeric(19,9, asdecimal=True),         nullable=False)
+    cost_basis       = db.Column(db.Numeric(19,5, asdecimal=True),         nullable=False)
+    invested         = db.Column(db.Numeric(19,5, asdecimal=True),         nullable=False)
+    last_transaction_update = db.Column(db.DateTime,                              nullable=False)
+    last_updated     = db.Column(db.DateTime,server_default=db.func.now(), onupdate=db.func.now(),       nullable=True)
+
+    def __init__(self,**kwargs):
+        '''
+        Parameters
+        ----------
+        symbol_id: int
+            Foreign key from securities table
+        total_shares: Decimal (19,9)
+            Total amount of shares combining all transactions and accounting for splits
+        cost_basis: Decimal(19,5)
+            Average cost per share based on total money invested and `total_shares`
+        invested: Decimal(19,5)
+            Total amount invested. It should be `total_shares` * `cost_basis`
+        last_transaction_update: datetime object
+            Time of the last transaction update for this symbol id according to the transactions table
+        last_updated: datetime object
+            Last time this record was modified
+        '''
+        self.total_shares     = kwargs.get('total_shares', 0)
+        self.cost_basis       = kwargs.get('cost_basis', 0)
+        self.last_transaction_update = kwargs.get('last_transaction_update', None)
+        self.invested         = kwargs.get('invested', None)
+        if self.invested is None:
+            self.invested = self.total_shares * self.cost_basis
+
+    def __repr__(self):
+        return f"< Position: symbol_id={self.symbol_id} total_shares={self.total_shares} cost_basis={self.cost_basis} invested={self.invested} >"
 
 class CryptoCurrency(db.Model):
     __tablename__ = 'cryptocurrencies'
