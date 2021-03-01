@@ -2,8 +2,6 @@ import os
 import datetime 
 import pandas as pd
 
-import yfinance as yf
-
 #============================================
 #     Flask Related Import
 from flask import Flask
@@ -39,13 +37,17 @@ from threading import Thread
 #     Local Files and Modules
 from models import db
 from models import (Security, Transaction, Broker, 
-                    Event, CryptoCurrency, CryptoWallet)
+                    Event, CryptoCurrency, CryptoWallet,
+                    Position,)
 from models import init_tables
 from forms import (CryptoWalletForm, RegisterBrokerForm, 
                    TransactionsForm, CheckEntryForm)
 from command_engine import command_engine
 
-from tools import yf_flags, get_id_to_symbol_dict
+from tools import get_id_to_symbol_dict, get_symbol_to_id_dict
+
+from table_updaters import (update_transactions_table,
+                            update_positions_table,)
 
 #=================================================
 #Here we define a database connection
@@ -60,153 +62,43 @@ FAKE_SECRET_KEY = 'super_duper_secure_key_1234'    #need secret key for CSRF fro
 app.config['SECRET_KEY'] = FAKE_SECRET_KEY
 
 Bootstrap(app)
-#db = SQLAlchemy(app)
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
-    #init_tables(db)
-    #db.session.commit()
 
-    
-#init_tables(db)
-#class Symbols(db.Model):
-CRYPTO_SYMBOL_TO_NAME = {
-    'btc' :'Bitcoin',
-    'eth' :'Ethereum',
-    'ltc' :'Litecoin',
-    'xrp' :'Ripple',
-    'ada' :'Cardano',
-    'usdc':'USD Coin',
-    'neo' :'Neo',
-    'usdt':'USD Tether',
-    'link':'Chainlink',
-    'dot' :'Polkadot',
-    'bnb' :'Binance Coin',
-    'bch' :'Bitcoin Cash',
-    'xlm' :'Stellar',
-    'nav' :'NavCoin',
-    'vtc' :'Vertcoin',
-    'doge':'DogeCoin',
-}
-
-BROKER_ALIASES_DICT = {
-    'robinhood'    :['robinhood','robin','hood','robinhood.com','rb'],
-    'shareowner'   :['shareowner','shareowneronline','shareowner_online','shareowner online','shareowneronline.com','soo','so',],
-    'schwab'       :['schwab','charles','charles schwab','schwab.com','cs','shb'],
-    'td Ameritrade':['td','ameritrade','thinkorswim','tdameritrade','td_ameritrade','tdameritrade.com','td ameritrade'],
-}
-
-def get_crypto_name(symbol):
-    name = CRYPTO_SYMBOL_TO_NAME.get(symbol,'Unknown')
-    return name
-
-def get_broker_name(broker_name):
-    broker_name = broker_name.lower()
-
-    for key in BROKER_ALIASES_DICT:
-        aliases = BROKER_ALIASES_DICT[key]
-        if broker_name in aliases:
-            return key
-    
-    return broker_name    #we only get to this point if the broker name is not recognized as a valid alias.
-
-def get_Broker_object(broker_name):
-    broker_name = broker_name.strip().lower()   #keep everything lowercase and stripped
-    broker_name = get_broker_name(broker_name)  #matches user-provided broker value with what exists in the database
-
-    broker = Broker.query.filter(Broker.name==broker_name).first()
-    if broker is None:
-        #creates broker and registers it in the database
-        broker = create_new_broker_object(broker_name)
-        db.session.add(broker)
-        db.session.commit()
-    return broker
-
-def get_cryptocurrency_object(crypto_symbol):
-    crypto_symbol = crypto_symbol.strip().lower()
-    crypto_object = CryptoCurrency.query.filter(CryptoCurrency.symbol==crypto_symbol).first()
-    if crypto_object is None:
-        name = get_crypto_name(crypto_symbol)
-        crypto_object = CryptoCurrency(symbol=crypto_symbol,name=name)
-        db.session.add(crypto_object)
-        db.session.commit()
-    return crypto_object
-
-def create_new_security_object(symbol):
-    ticker = yf.Ticker(symbol)
-    instrument_type = ticker.info.get(yf_flags.FLAG_INSTRUMENT_TYPE,None)
-    company_name    = ticker.info.get(yf_flags.FLAG_NAME,None)
-    sector          = ticker.info.get(yf_flags.FLAG_SECTOR,None)
-    currency        = ticker.info.get(yf_flags.FLAG_CURRENCY,'USD')
-
-    new_sec = Security(symbol,
-                       instrument_type=instrument_type,
-                       name=company_name,
-                       sector=sector,
-                       currency=currency)
-    return new_sec
-
-def create_new_broker_object(broker_name,website=''):
-    '''Creates broker object based on broker_name'''
-    broker = Broker(broker_name,website)
-    return broker
-    
+#==============================================================
+#                           ROUTES
+#==============================================================
 @app.route("/",methods=['GET','POST'])
 def home():
-    
+    sym_dic = get_symbol_to_id_dict(db)
+    update_positions_table(db,sym_dic.keys())
     form = TransactionsForm(request.form)
+    form_was_submitted = False
+
     if request.method == 'POST' and form.validate_on_submit():
+        form_was_submitted = True
+        trans_str = form.transactions_str.data
 
-        tickers_dict = command_engine(form.transactions_str.data)
-        #except:
-        #    return "Something went horribly wrong, but I don't know what"
-        
-        for symbol in tickers_dict:
-            SYMBOL_object = Security.query.filter(Security.symbol==symbol).first()     #without .first() the return is a query object
-            if SYMBOL_object is None:
-                SYMBOL_object = create_new_security_object(symbol)
-                db.session.add(SYMBOL_object)
-                db.session.commit()
-            print(f"\n\n--> {SYMBOL_object}\n\n")
-            
-            trans_events = tickers_dict[symbol]   #gets list of TransactionEvent objects
-            for trans in trans_events:
-                BROKER_object = get_Broker_object(trans.broker)
-                TRANS_object = Transaction(
-                    #trans.ticker, 
-                    trans.amount, 
-                    trans.cost_basis, 
-                    trans.is_dividend(),
-                    #get_broker_id(trans.broker),
-                    time_execution=trans.datetime,
-                )
+        #process the str command into dict of TransactionEvent objects
+        tickers_dict = command_engine(trans_str)  
 
-                SYMBOL_object.transactions.append(TRANS_object)
-                BROKER_object.transactions.append(TRANS_object)
-                db.session.add(TRANS_object)
+        #update relevant tables
+        update_transactions_table(db,tickers_dict)
+        update_positions_table(db,tickers_dict.keys())  #I could technically just send tickers_dict and it should work
 
-        db.session.commit()
-        #return redirect(url_for('home'))
+    # This is the display portion
+    plot_fig = histogram_holdings()
+    if plot_fig is not None:
+        script, div = components(plot_fig)
+    else:
+        script = ''
+        div    = ''
+    js_resources = ''  #INLINE.render_js()
+    css_resources = '' #INLINE.render_css()
 
-        #js_resources = INLINE.render_js()
-        #css_resources = INLINE.render_css()
-        #return render_template("home.html", form=form, script=script, div=div)
-    #else:
-        #return render_template("home.html", form=form, script=script, div=div)
-
-        #================================================================
-        #================================================================
-        # This is the display portion
-        plot_fig = histogram_holdings()
-        if plot_fig is not None:
-            script, div = components(plot_fig)
-        else:
-            script = ''
-            div    = ''
-        js_resources = ''  #INLINE.render_js()
-        css_resources = '' #INLINE.render_css()
-
+    if form_was_submitted:
         return redirect(url_for("home",
                                 js_resources=js_resources,
                                 css_resources=css_resources,
@@ -214,16 +106,6 @@ def home():
                                 script=script,
                                 div=div,))
     else:
-        # This is the display portion
-        plot_fig = histogram_holdings()
-        if plot_fig is not None:
-            script, div = components(plot_fig)
-        else:
-            script = ''
-            div    = ''
-        js_resources = ''  #INLINE.render_js()
-        css_resources = '' #INLINE.render_css()
-
         # render template
         html = render_template(
             'home.html',
@@ -323,6 +205,9 @@ def check_entries():
         
         elif table_to_show == '5': #'events':  
             sql_statement = db.session.query(Event).statement
+        
+        elif table_to_show == '6': #'positions'
+            sql_statement = db.session.query(Position).statement
 
         #=====GET DATAFRAME FROM DATABASE
         df = pd.read_sql(sql=sql_statement,con=db.session.bind)
@@ -380,10 +265,7 @@ def histogram_holdings():
     }
     #sec_df = sec_df[['symbol','id']]
     '''
-    #get list of id and symbols and turn them into dict
-    sec_list = db.session.query(Security.id,Security.symbol).all()
-    id_to_symbol_mapping = dict(sec_list)
-    id_to_symbol_mapping = {sym_id:id_to_symbol_mapping[sym_id].upper() for sym_id in id_to_symbol_mapping}
+    id_to_symbol_mapping = get_id_to_symbol_dict(db)
     
     trans_df = pd.read_sql(sql=db.session.query(Transaction).statement,con=db.session.bind)
     if len(trans_df) < 1:
