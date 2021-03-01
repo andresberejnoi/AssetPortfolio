@@ -1,9 +1,12 @@
 """Collection of tools to use in different situations"""
+import math
+import decimal
 import pandas as pd
 from datetime import datetime
 from types import SimpleNamespace
 from models import (Security, Transaction, Broker, 
-                    Event, CryptoCurrency, CryptoWallet)
+                    Event, CryptoCurrency, CryptoWallet,
+                    Position,)
 
 yf_flags = SimpleNamespace(
     FLAG_INSTRUMENT_TYPE     = 'quoteType',
@@ -71,6 +74,7 @@ def get_id_to_symbol_dict(db):
 
 
 def get_split_events_df(db):
+    '''NOT OPERATIONAL YET'''
     sql_statement = db.session.query(
                         Event.event_date, 
                         Event.symbol_id, 
@@ -81,3 +85,117 @@ def get_split_events_df(db):
 
     df = pd.read_sql(sql=sql_statement,con=db.session.bind)
     return df
+
+def get_last_transaction_datetime(db,symbol_id):
+    TRANS_object = db.session.query(Transaction).filter(Transaction.symbol_id==symbol_id).order_by(Transaction.time_execution.desc()).first()
+    if TRANS_object is None:
+        return None
+    return TRANS_object.time_execution
+
+def get_last_split_datetime(db,symbol_id):
+    EVENT_object = db.session.query(Event).filter(Event.symbol_id==symbol_id,Event.event_type=='split').order_by(Event.event_date.desc()).first()
+    if EVENT_object is None:
+        return None
+    return EVENT_object.event_date
+
+def compute_num_shares(db,symbol_id):
+
+    #get transactions for current symbol, ordered by date, ascending
+    sql_statement = db.session.query(Transaction).filter(Transaction.symbol_id==symbol_id).order_by(Transaction.time_execution.asc()).statement
+    trans_df = pd.read_sql(sql=sql_statement,con=db.session.bind)
+    trans_df = trans_df.set_index('time_execution', drop=True)
+
+    #get split events for current symbol, ordered by date, ascending
+    event_type = 'split'
+    sql_statement = db.session.query(Event).filter(Event.symbol_id==symbol_id,Event.event_type==event_type).order_by(Event.event_date.asc()).statement
+    splits = pd.read_sql(sql=sql_statement,con=db.session.bind)
+    splits = splits[['event_date','split_factor']].set_index('event_date', drop=True)
+
+    if len(splits) < 1:
+        total_shares = trans_df['num_shares'].sum()
+    else:
+        total_shares = 0
+        prev_split_date = '1800-01-01'
+        for row in splits.itertuples():
+            split_date   = row.Index
+            split_factor = row[1]
+
+            shares_to_split = trans_df[prev_split_date:split_date]
+            total_split_factor = splits[split_date:].aggregate(math.prod)[0]   #gets the single factor from multiplying all the splits from this time to the present
+
+            total_shares += (shares_to_split['num_shares']*total_split_factor).sum()
+
+            prev_split_date = split_date
+
+        #Here we add the last portion of shares purchased after last split
+        total_shares += trans_df[prev_split_date:]['num_shares'].sum()
+
+    return total_shares
+
+def compute_shares_after_splits(db,symbol_id,trans_df=None):
+    '''
+    Computes total number of shares for given `symbol_id` by taking into account
+    the split events from the `events` table. It will also compute the adjusted 
+    cost basis as an average of the share value.
+
+    Parameters
+    ----------
+    db: Flask-SQLAlchemy handle
+        The object that allows us to interact with the database
+    symbol_id: int
+        Foreign key to the corresponding `symbol` in `securities` table
+    trans_df: pandas.DataFrame
+        The transactions we are interested in adjusting. Index for this dataframe should
+        be the `time_execution` field from the `transactions` table and 
+        converted into `DatetimeIndex`. This should be a dataframe obtained from reading the 
+        database table `transactions` into a pandas dataframe. For example:
+
+        ```py
+        sql_query = db.session.query(Transaction).filter(Transaction.symbol_id==symbol_id).order_by(Transaction.time_execution.asc()).statement
+        trans_df = pd.read_sql(sql=sql_query,con=db.session.bind)
+        trans_df = trans_df.set_index('time_execution', drop=True)
+        ```
+        As such, `trans_df` is expected to have columns `num_shares` and `cost_basis`
+    Returns
+    -------
+    adjusted_values: tuple of decimal.Decimal
+        A collection of adjusted values based on the splits applied. i.e.:
+        (total_adjusted_shares, adjusted_cost_basis, money_invested)
+    '''
+    #if trans_df is not provided, use all transactions (this will be the case when the `positions` table is first created)
+    if trans_df is None:
+        sql_query = db.session.query(Transaction).filter(Transaction.symbol_id==symbol_id).order_by(Transaction.time_execution.asc()).statement
+        trans_df = pd.read_sql(sql=sql_query,con=db.session.bind)
+        trans_df = trans_df.set_index('time_execution', drop=True)
+
+    #get split events for current symbol, ordered by date, ascending
+    event_type = 'split'
+    sql_statement = db.session.query(Event).filter(Event.symbol_id==symbol_id,Event.event_type==event_type).order_by(Event.event_date.asc()).statement
+    splits = pd.read_sql(sql=sql_statement,con=db.session.bind)
+    splits = splits[['event_date','split_factor']].set_index('event_date', drop=True)
+
+    if len(splits) < 1:
+        total_shares = trans_df['num_shares'].sum()
+        money_invested = (trans_df['num_shares'] * trans_df['cost_basis']).sum()
+        adjusted_cost_basis = money_invested / total_shares
+    else:
+        total_shares    = 0
+        prev_split_date = '1800-01-01'
+        for row in splits.itertuples():
+            split_date   = row.Index
+            split_factor = row[1]
+
+            shares_to_split = trans_df[prev_split_date:split_date]
+            total_split_factor = splits[split_date:].aggregate(math.prod)[0]   #gets the single factor from multiplying all the splits from this time to the present
+            total_shares += (shares_to_split['num_shares']*total_split_factor).sum()
+
+            prev_split_date = split_date
+
+        #Here we add the last portion of shares purchased after last split
+        total_shares += trans_df[prev_split_date:]['num_shares'].sum()
+        money_invested = (trans_df['num_shares'] * trans_df['cost_basis']).sum()
+        adjusted_cost_basis = money_invested / total_shares
+
+    return (decimal.Decimal(total_shares),
+            decimal.Decimal(adjusted_cost_basis),
+            decimal.Decimal(money_invested),)
