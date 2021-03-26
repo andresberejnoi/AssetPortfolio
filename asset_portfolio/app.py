@@ -73,7 +73,7 @@ with app.app_context():
 @app.route("/",methods=['GET','POST'])
 def home():
     sym_dic = get_symbol_to_id_dict(db)
-    update_positions_table(db,sym_dic.keys())
+    #update_positions_table(db,sym_dic.keys())
     form = TransactionsForm(request.form)
     form_was_submitted = False
 

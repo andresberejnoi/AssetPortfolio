@@ -177,7 +177,10 @@ def compute_shares_after_splits(db,symbol_id,trans_df=None):
     if len(splits) < 1:
         total_shares = trans_df['num_shares'].sum()
         money_invested = (trans_df['num_shares'] * trans_df['cost_basis']).sum()
-        adjusted_cost_basis = money_invested / total_shares
+        if total_shares == 0:
+            adjusted_cost_basis = 0
+        else:
+            adjusted_cost_basis = money_invested / total_shares
     else:
         total_shares    = 0
         prev_split_date = '1800-01-01'
@@ -194,7 +197,10 @@ def compute_shares_after_splits(db,symbol_id,trans_df=None):
         #Here we add the last portion of shares purchased after last split
         total_shares += trans_df[prev_split_date:]['num_shares'].sum()
         money_invested = (trans_df['num_shares'] * trans_df['cost_basis']).sum()
-        adjusted_cost_basis = money_invested / total_shares
+        if total_shares == 0:
+            adjusted_cost_basis = 0
+        else:
+            adjusted_cost_basis = money_invested / total_shares
 
     return (decimal.Decimal(total_shares),
             decimal.Decimal(adjusted_cost_basis),
