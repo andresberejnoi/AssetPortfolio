@@ -215,7 +215,7 @@ def command_engine(command_str):
         Dictionary mapping ticker symbols to a list of TransactionEvent objects. Example:
         {
             'aapl':[<TransactionEvent>, <TransactionEvent>, <TransactionEvent>, ...],
-            'msft':[<TransactionEvent>,<TransactionEvent>],
+            'msft':[<TransactionEvent>,<TransactionEvent>, ...],
             'nrz':[<TransactionEvent>]
         }
     '''
