@@ -51,9 +51,21 @@ from table_updaters import (update_transactions_table,
 
 #=================================================
 #Here we define a database connection
-project_dir  = os.path.dirname(os.path.abspath(__file__))
-database_dir = os.path.join(project_dir, "asset_portfolio.db")
-database_file = f"sqlite:///{database_dir}"
+DB_TYPE = 'mysql'
+if DB_TYPE == 'mysql':
+    username  = 'root'
+    password  = 'new_password'
+    host      = 'localhost'
+    port      = 3306
+    _database = 'something'
+
+    database_file = f"mysql://{username}:{password}@{host}:{port}/{_database}"
+
+elif DB_TYPE == 'sqlite':
+
+    project_dir  = os.path.dirname(os.path.abspath(__file__))
+    database_dir = os.path.join(project_dir, "asset_portfolio.db")
+    database_file = f"sqlite:///{database_dir}"
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_file
