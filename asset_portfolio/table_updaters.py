@@ -32,6 +32,7 @@ CRYPTO_SYMBOL_TO_NAME = {
     'nav' :'NavCoin',
     'vtc' :'Vertcoin',
     'doge':'DogeCoin',
+    'matic':'Polymatic',
 }
 
 BROKER_ALIASES_DICT = {
