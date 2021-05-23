@@ -6,6 +6,7 @@ import pandas as pd
 
 from flask import Flask
 import os
+import sys
 
 from models import db
 from models import (Security, Transaction, Broker, 
@@ -52,12 +53,34 @@ def events_table_updater(db):
 
 if __name__ == '__main__':
     #Here we define a database connection
-    project_dir  = os.getcwd()
-    database_dir = os.path.join(project_dir, "asset_portfolio.db")
-    database_file = f"sqlite:///{database_dir}"
+    try:
+        DB_TYPE = sys.argv[1]
+    except IndexError:
+        DB_TYPE = 'mysql'
+    
+    supported_dbs = ['mysql','sqlite']
+    #DB_TYPE = 'mysql'
+    if DB_TYPE == 'mysql':
+        username  = 'root'
+        password  = 'new_password'
+        host      = 'localhost'
+        port      = 3306
+        _database = 'portfolio'
+
+        database_URI = f"mysql://{username}:{password}@{host}:{port}/{_database}"
+
+    elif DB_TYPE == 'sqlite':
+
+        project_dir  = os.path.dirname(os.path.abspath(__file__))
+        database_dir = os.path.join(project_dir, "asset_portfolio.db")
+        database_URI = f"sqlite:///{database_dir}"
+
+    else:
+        print(f'--> Database {DB_TYPE} not supported.\n\tDatabase options supported: {supported_dbs}')
+        exit()
 
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_file
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_URI
 
     db.init_app(app)
     with app.app_context():
