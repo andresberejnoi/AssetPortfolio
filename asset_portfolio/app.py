@@ -57,18 +57,20 @@ if DB_TYPE == 'mysql':
     password  = 'new_password'
     host      = 'localhost'
     port      = 3306
-    _database = 'something'
+    _database = 'portfolio'
 
-    database_file = f"mysql://{username}:{password}@{host}:{port}/{_database}"
+    database_URI = f"mysql://{username}:{password}@{host}:{port}/{_database}"
 
 elif DB_TYPE == 'sqlite':
 
     project_dir  = os.path.dirname(os.path.abspath(__file__))
     database_dir = os.path.join(project_dir, "asset_portfolio.db")
-    database_file = f"sqlite:///{database_dir}"
+    database_URI = f"sqlite:///{database_dir}"
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = database_file
+app.config['SQLALCHEMY_DATABASE_URI'] = database_URI
+
+#engine = sqlalchemy.create_engine(database_URI)
 
 FAKE_SECRET_KEY = 'super_duper_secure_key_1234'    #need secret key for CSRF from WTF-Forms to work
 app.config['SECRET_KEY'] = FAKE_SECRET_KEY
