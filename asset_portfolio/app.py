@@ -49,15 +49,20 @@ from tools import get_id_to_symbol_dict, get_symbol_to_id_dict
 from table_updaters import (update_transactions_table,
                             update_positions_table,)
 
+import yaml
 #=================================================
 #Here we define a database connection
 DB_TYPE = 'mysql'
 if DB_TYPE == 'mysql':
-    username  = 'root'
-    password  = 'new_password'
-    host      = 'localhost'
-    port      = 3306
-    _database = 'portfolio'
+    with open('mysql_config.yml') as f_handler:
+        config = yaml.safe_load(f_handler)
+    
+
+    username  = config.get('username')
+    password  = config.get('password')
+    host      = config.get('host')
+    port      = config.get('port')
+    _database = config.get('database')
 
     database_URI = f"mysql://{username}:{password}@{host}:{port}/{_database}"
 
