@@ -13,6 +13,8 @@ from models import (Security, Transaction, Broker,
                     Event, CryptoCurrency, CryptoWallet)
 
 from tools import get_symbol_to_id_dict
+
+import yaml
 #=================================================
 
 def events_table_updater(db):
@@ -61,11 +63,14 @@ if __name__ == '__main__':
     supported_dbs = ['mysql','sqlite']
     #DB_TYPE = 'mysql'
     if DB_TYPE == 'mysql':
-        username  = 'root'
-        password  = 'new_password'
-        host      = 'localhost'
-        port      = 3306
-        _database = 'portfolio'
+        with open('mysql_config.yml') as f_handler:
+            config = yaml.safe_load(f_handler)
+        
+        username  = config.get('username')
+        password  = config.get('password')
+        host      = config.get('host')
+        port      = config.get('port')
+        _database = config.get('database')
 
         database_URI = f"mysql://{username}:{password}@{host}:{port}/{_database}"
 
