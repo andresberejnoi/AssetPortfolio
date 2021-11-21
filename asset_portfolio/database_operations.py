@@ -10,9 +10,9 @@ import sys
 
 from models import db
 from models import (Security, Transaction, Broker, 
-                    Event, CryptoCurrency, CryptoWallet)
+                    Event, CryptoCurrency, CryptoWallet, Dividend)
 
-from tools import get_symbol_to_id_dict
+from tools import get_symbol_to_id_dict, webscrape_tipranks
 
 import yaml
 #=================================================
@@ -53,6 +53,47 @@ def events_table_updater(db):
 
     db.session.commit()
 
+def dividends_table_updater(db):
+    sec_dict = get_symbol_to_id_dict(db)
+
+    for symbol in sec_dict:
+        symbol_id = sec_dict[symbol]
+        #events_df = pd.DataFrame(yf.Ticker(symbol).splits)
+
+        #Retrive security from database to link to dividend
+        SEC_object = db.session.query(Security).filter(Security.symbol==symbol).first()
+
+        _, _, div_amount, ex_div_date, div_pay_date, schedule_type, *extras = webscrape_tipranks(symbol)
+        if schedule_type=='monthly':
+            pay_schedule = 0
+        elif schedule_type=='quaterly':
+            pay_schedule = (div_pay_date.month % 3) + 1 #this will make the value between [1-3]
+        elif schedule_type is None:
+            pay_schedule = -1
+        else:
+            pay_schedule = -1
+
+        DIVIDEND_OBJ = db.session.query(Dividend).filter(Dividend.symbol_id==symbol_id).first()
+        
+        if DIVIDEND_OBJ is None:
+            DIVIDEND_OBJ = Dividend(dividend_amount  =div_amount,
+                                    exdividend_date  =ex_div_date,
+                                    payment_date     =div_pay_date,
+                                    payment_schedule =pay_schedule,) 
+            SEC_object.dividends.append(DIVIDEND_OBJ)
+            db.session.add(DIVIDEND_OBJ)
+        else:
+            update_dict = {
+                'dividend_amount'  : div_amount,
+                'payment_schedule' : pay_schedule,
+                'exdividend_date'  : ex_div_date,
+                'payment_date'     : div_pay_date,
+            }
+            DIVIDEND_OBJ.dividend_amount = div_amount
+            db.session.query(Dividend).filter_by(symbol_id=symbol_id).update(update_dict)
+
+        db.session.commit()
+
 if __name__ == '__main__':
     #Here we define a database connection
     try:
@@ -82,11 +123,16 @@ if __name__ == '__main__':
 
     else:
         print(f'--> Database {DB_TYPE} not supported.\n\tDatabase options supported: {supported_dbs}')
-        exit()
+        sys.exit()
 
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_URI
 
+    func_to_run = sys.argv[2]
+
     db.init_app(app)
     with app.app_context():
-        events_table_updater(db)
+        if func_to_run=='splits':
+            events_table_updater(db)
+        elif func_to_run=='dividends':
+            dividends_table_updater(db)
