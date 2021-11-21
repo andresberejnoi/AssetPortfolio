@@ -8,6 +8,10 @@ from models import (Security, Transaction, Broker,
                     Event, CryptoCurrency, CryptoWallet,
                     Position,)
 
+from bs4 import BeautifulSoup
+import requests
+import re
+
 yf_flags = SimpleNamespace(
     FLAG_INSTRUMENT_TYPE     = 'quoteType',
     FLAG_SECTOR              = 'sector',
@@ -205,3 +209,56 @@ def compute_shares_after_splits(db,symbol_id,trans_df=None):
     return (decimal.Decimal(total_shares),
             decimal.Decimal(adjusted_cost_basis),
             decimal.Decimal(money_invested),)
+
+
+def webscrape_tipranks(ticker):
+    base_url    = "https://www.tipranks.com/stocks/"
+    url_section = "/dividends"
+    url  = f"{base_url}{ticker}{url_section}"
+    
+    #==================
+    r = requests.get(url)
+    soup = BeautifulSoup(r.content, 'html5lib')
+    fundamentals = soup.find_all('div', attrs={'data-s':'fundamentals'})
+    
+    try:
+        item = fundamentals[0]
+    except IndexError:
+        return ticker, None, None, None, None, None
+    
+    #========Regex Patterns
+    float_pattern = r"\$([0-9]+.[0-9]+)"  #for values like $1.64, $0.78, etc
+    int_pattern   = r"\$([0-9]+)"         #for values like $2, $10, $1, etc (no decimal point)
+    pattern       = f"{float_pattern}|{int_pattern}"
+    
+    negative_float_pattern = r"(?:\$[0-9]+.[0-9]+)"  #for values like $1.64, $0.78, etc
+    negative_int_pattern   = r"(?:\$[0-9]+)"         #for values like $2, $10, $1, etc (no decimal point)
+    schedule_type_pattern  = f"(?:{negative_float_pattern}|{negative_int_pattern})([a-z]+)\s*"
+    
+    months  = r"(jan|feb|mar|apr|may|jun|july|aug|sep|oct|nov|dec)"
+    date_pattern = f"({months} ([0-9]+), ([0-9]+))"
+    
+    ex_div_date_pattern  = f"(?:next ex-dividend date)\s*{date_pattern}"  #the ?: makes sure that the whole group inside the parenthesis is not captured
+    payment_date_pattern = f"(?:payment date)\s*{date_pattern}" 
+    
+    if item is not None:
+        str_item = item.text.lower()
+
+        res = re.search(pattern, str_item)
+        if res:
+            div_str    = res.group()
+            div_str    = div_str.replace("$", "")
+            div_amount = decimal.Decimal(div_str)
+            
+            #_str_ex_div_date = re.search(ex_div_date_pattern, str_item).groups()[0]  #first item   #date comes in format: Dec 15, 2021
+            
+            dates = re.findall(date_pattern, str_item)
+            _str_ex_div_date = dates[0][0]
+            _str_pay_date    = dates[1][0]
+            
+            ex_div_date   = datetime.strptime(_str_ex_div_date, "%b %d, %Y")    #datetime.strptime('Jun 1, 2005  1:33PM', '%b %d, %Y %I:%M%p')
+            payment_date  = datetime.strptime(_str_pay_date, "%b %d, %Y")
+            schedule_type = re.search(schedule_type_pattern, str_item).groups()[0].strip()
+            
+        return ticker, div_str, div_amount, ex_div_date, payment_date, schedule_type
+    
