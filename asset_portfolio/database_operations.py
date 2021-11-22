@@ -66,7 +66,7 @@ def dividends_table_updater(db):
         _, _, div_amount, ex_div_date, div_pay_date, schedule_type, *extras = webscrape_tipranks(symbol)
         if schedule_type=='monthly':
             pay_schedule = 0
-        elif schedule_type=='quaterly':
+        elif schedule_type=='quarterly':
             pay_schedule = (div_pay_date.month % 3) + 1 #this will make the value between [1-3]
         elif schedule_type is None:
             pay_schedule = -1
