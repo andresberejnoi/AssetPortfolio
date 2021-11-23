@@ -1,6 +1,7 @@
 """Collection of tools to use in different situations"""
 import math
 import decimal
+from numpy.lib.arraysetops import isin
 import pandas as pd
 from datetime import datetime
 from types import SimpleNamespace
@@ -278,17 +279,22 @@ def write_table_to_csv(db, table='transactions', output_file=''):
         'dividends'    : Dividend,
     }
 
+    NO_SYMBOL_ID = (Security, CryptoCurrency, CryptoWallet, Broker)
+
     if len(output_file) < 1:
         folder_output = 'db_files'
         if not os.path.exists(folder_output):
             os.mkdir(folder_output)
-
-        output_file = os.path.join(folder_output, "transactions.csv")
+        output_file = os.path.join(folder_output, f"{table}.csv")
             
     table_class = TABLE_MAP.get(table.lower(), 'transactions')
     sql_statement = db.session.query(table_class).statement
     df = pd.read_sql(sql=sql_statement,con=db.session.bind)
 
+    #----------Replace Ticker Ids with Actual Tickers
+    if not isinstance(table_class, NO_SYMBOL_ID):
+        ids_to_tickers_dict = get_id_to_symbol_dict(db)
+        df = df.replace({'symbol_id':ids_to_tickers_dict})
     df.to_csv(output_file,)
 
 def get_mysql_uri(config_file='mysql_config.yml', database_name=None):
