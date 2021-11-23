@@ -1,6 +1,7 @@
 """
 Collection of functions to perform CRUD operations on a database in the background
 """
+from operator import index
 import yfinance as yf
 import pandas as pd
 
@@ -128,8 +129,11 @@ if __name__ == '__main__':
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_URI
 
-    func_to_run = sys.argv[2]
-
+    try:
+        func_to_run = sys.argv[2]
+    except IndexError:
+        func_to_run = 'splits'
+        
     db.init_app(app)
     with app.app_context():
         if func_to_run=='splits':
