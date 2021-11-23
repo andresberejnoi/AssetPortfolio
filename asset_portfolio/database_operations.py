@@ -13,7 +13,7 @@ from models import db
 from models import (Security, Transaction, Broker, 
                     Event, CryptoCurrency, CryptoWallet, Dividend)
 
-from tools import get_symbol_to_id_dict, webscrape_tipranks
+from tools import get_symbol_to_id_dict, webscrape_tipranks, get_mysql_uri
 
 import yaml
 #=================================================
@@ -105,16 +105,7 @@ if __name__ == '__main__':
     supported_dbs = ['mysql','sqlite']
     #DB_TYPE = 'mysql'
     if DB_TYPE == 'mysql':
-        with open('mysql_config.yml') as f_handler:
-            config = yaml.safe_load(f_handler)
-        
-        username  = config.get('username')
-        password  = config.get('password')
-        host      = config.get('host')
-        port      = config.get('port')
-        _database = config.get('database')
-
-        database_URI = f"mysql://{username}:{password}@{host}:{port}/{_database}"
+        database_URI = get_mysql_uri(config_file='mysql_config.yml')
 
     elif DB_TYPE == 'sqlite':
 
@@ -133,7 +124,7 @@ if __name__ == '__main__':
         func_to_run = sys.argv[2]
     except IndexError:
         func_to_run = 'splits'
-        
+
     db.init_app(app)
     with app.app_context():
         if func_to_run=='splits':
