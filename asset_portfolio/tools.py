@@ -4,13 +4,19 @@ import decimal
 import pandas as pd
 from datetime import datetime
 from types import SimpleNamespace
+
+from models import db
 from models import (Security, Transaction, Broker, 
                     Event, CryptoCurrency, CryptoWallet,
-                    Position,)
+                    Position, Dividend)
 
 from bs4 import BeautifulSoup
 import requests
 import re
+import os
+import sys
+import yaml
+from flask import Flask
 
 yf_flags = SimpleNamespace(
     FLAG_INSTRUMENT_TYPE     = 'quoteType',
@@ -261,4 +267,53 @@ def webscrape_tipranks(ticker):
             schedule_type = re.search(schedule_type_pattern, str_item).groups()[0].strip()
             
         return ticker, div_str, div_amount, ex_div_date, payment_date, schedule_type
+
+def write_table_to_csv(db, table='transactions', output_file=''):
+    TABLE_MAP = {
+        'transactions' : Transaction,
+        'positions'    : Position,
+        'events'       : Event,
+        'securities'   : Security,
+        'brokers'      : Broker,
+        'dividends'    : Dividend,
+    }
+
+    table_object = TABLE_MAP[table.lower()]
+    if len(output_file) < 1:
+        folder_output = 'db_files'
+        if not os.path.exists(folder_output):
+            os.mkdir(folder_output)
+
+        output_file = os.path.join(folder_output, "transactions.csv")
+        
+            
+
+    sql_statement = db.session.query(table_object).statement
+    df = pd.read_sql(sql=sql_statement,con=db.session.bind)
+
+    df.to_csv(output_file,)
+
+def get_mysql_uri(config_file='mysql_config.yml', database_name=None):
+    with open(config_file) as f_handler:
+        config = yaml.safe_load(f_handler)
+        
+    username  = config.get('username')
+    password  = config.get('password')
+    host      = config.get('host')
+    port      = config.get('port')
+    _database = config.get('database') if database_name is None else database_name
+
+    database_URI = f"mysql://{username}:{password}@{host}:{port}/{_database}"
+
+if __name__ == '__main__':
+    #test writing database tables to csv
+    try:
+        table = sys.argv[1]
+    except IndexError:
+        table = 'transactions'
     
+    database_URI = get_mysql_uri('mysql_config.yml')
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_URI
+
+    write_table_to_csv(db, table=table,)
