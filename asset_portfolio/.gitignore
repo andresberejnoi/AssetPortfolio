@@ -2,3 +2,5 @@ mysql_config.yml
 api_keys.yml
 
 crypto_addresses.md
+db_files/
+
