@@ -73,6 +73,7 @@ elif DB_TYPE == 'sqlite':
     database_URI = f"sqlite:///{database_dir}"
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = database_URI
 
 #engine = sqlalchemy.create_engine(database_URI)
