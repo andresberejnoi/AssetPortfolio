@@ -310,6 +310,32 @@ def get_mysql_uri(config_file='mysql_config.yml', database_name=None):
     database_URI = f"mysql://{username}:{password}@{host}:{port}/{_database}"
     return database_URI
 
+def exists_in_table(new_entry, db):
+    table_class = type(new_entry)
+    match = False
+
+    if isinstance(new_entry, Security):
+        match = db.session.query(table_class).fitler(table_class.symbol==new_entry.symbol).first()
+    elif isinstance(new_entry, Broker):
+        pass
+
+    elif isinstance(new_entry, Transaction):
+        match = db.session.query(table_class).filter(
+            table_class.symbol_id==new_entry.symbol_id,
+            table_class.num_shares==new_entry.num_shares,
+            table_class.cost_basis==new_entry.cost_basis,
+            table_class.is_dividend==new_entry.is_dividend,
+            table_class.time_execution==new_entry.time_execution,
+            ).first()
+
+    if match:
+        return True
+    else:
+        return False
+
+def generate_unique_id(new_entry):
+    pass 
+
 if __name__ == '__main__':
     #test writing database tables to csv
     try:
