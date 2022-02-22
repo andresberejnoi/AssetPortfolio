@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import backref
 #from flask import Flask
 
 #db = SQLAlchemy
@@ -16,9 +17,10 @@ class Security(db.Model):
     currency     = db.Column(db.String(32))
     #date_created = db.Column(db.DateTime, server_default=db.func.now())
     last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
-    transactions = db.relationship('Transaction',backref='securities',lazy=True)
-    events       = db.relationship('Event'      ,backref='securities',lazy=True)
-    positions    = db.relationship('Position'   ,backref='securities',lazy=True)
+    transactions = db.relationship('Transaction', backref='securities', lazy=True)
+    events       = db.relationship('Event'      , backref='securities', lazy=True)
+    positions    = db.relationship('Position'   , backref='securities', lazy=True)
+    dividends    = db.relationship('Dividend'   , backref='securities', lazy=True)
     
     def __init__(self,symbol,instrument_type=None,name=None,sector=None,currency=None):
         self.symbol   = symbol
@@ -68,7 +70,7 @@ class Broker(db.Model):
     name    = db.Column(db.String(255), nullable=False, unique=True)
     website = db.Column(db.String(255), nullable=True) 
     last_updated = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now(),nullable=False)
-    transactions = db.relationship('Transaction',backref='brokers',lazy=True)
+    transactions = db.relationship('Transaction', backref='brokers',lazy=True)
 
     def __init__(self, name, website=''):
         self.name = name 
@@ -139,6 +141,36 @@ class Position(db.Model):
 
     def __repr__(self):
         return f"< Position: symbol_id={self.symbol_id} total_shares={self.total_shares} cost_basis={self.cost_basis} invested={self.invested} >"
+
+class Dividend(db.Model):
+    __tablename__    = "current_dividends"
+    id               = db.Column(db.Integer, db.Sequence('current_dividends_id_seq'), primary_key=True)
+    symbol_id        = db.Column(db.Integer, db.ForeignKey('securities.id'),  nullable=False)
+    dividend_amount  = db.Column(db.Numeric(19, 5, asdecimal=True),           nullable=True)
+    payment_schedule = db.Column(db.Integer,  nullable=True)
+    exdividend_date  = db.Column(db.DateTime, nullable=True)
+    payment_date     = db.Column(db.DateTime, nullable=True)
+    last_updated     = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now(), nullable=True)
+
+    #For printing purposes
+    SCHEDULE_DICT = {
+        -1 : 'N/A',
+        0  : 'montly',
+        1  : 'Jan,Apr,July,Oct',
+        2  : 'Feb,May,Aug,Nov',
+        3  : 'Mar,June,Sep,Dec',
+        4  : 'bi-annual',
+        5  : 'irregular'
+    }
+
+    def __init__(self, dividend_amount, payment_schedule, exdividend_date, payment_date):
+        self.dividend_amount  = dividend_amount
+        self.payment_schedule = payment_schedule
+        self.exdividend_date  = exdividend_date
+        self.payment_date     = payment_date
+
+    def __repr__(self):
+        return f"<Dividend: symbol_id={self.symbol_id} | Amount=${self.dividend_amount} | Schedule={self.SCHEDULE_DICT[self.payment_schedule]} | last updated on: {self.last_updated}"
 
 class CryptoCurrency(db.Model):
     __tablename__ = 'cryptocurrencies'

@@ -35,7 +35,7 @@ from bokeh.io import curdoc
 from threading import Thread
 #============================================
 #     Local Files and Modules
-from models import db
+from models import Dividend, db
 from models import (Security, Transaction, Broker, 
                     Event, CryptoCurrency, CryptoWallet,
                     Position,)
@@ -73,6 +73,7 @@ elif DB_TYPE == 'sqlite':
     database_URI = f"sqlite:///{database_dir}"
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = database_URI
 
 #engine = sqlalchemy.create_engine(database_URI)
@@ -227,6 +228,9 @@ def check_entries():
         
         elif table_to_show == '6': #'positions'
             sql_statement = db.session.query(Position).statement
+
+        elif table_to_show == '7': #dividends
+            sql_statement = db.session.query(Dividend).statement
 
         #=====GET DATAFRAME FROM DATABASE
         df = pd.read_sql(sql=sql_statement,con=db.session.bind)

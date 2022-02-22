@@ -1,12 +1,23 @@
 """Collection of tools to use in different situations"""
 import math
 import decimal
+from numpy.lib.arraysetops import isin
 import pandas as pd
 from datetime import datetime
 from types import SimpleNamespace
+
+from models import db
 from models import (Security, Transaction, Broker, 
                     Event, CryptoCurrency, CryptoWallet,
-                    Position,)
+                    Position, Dividend)
+
+from bs4 import BeautifulSoup
+import requests
+import re
+import os
+import sys
+import yaml
+from flask import Flask
 
 yf_flags = SimpleNamespace(
     FLAG_INSTRUMENT_TYPE     = 'quoteType',
@@ -205,3 +216,138 @@ def compute_shares_after_splits(db,symbol_id,trans_df=None):
     return (decimal.Decimal(total_shares),
             decimal.Decimal(adjusted_cost_basis),
             decimal.Decimal(money_invested),)
+
+
+def webscrape_tipranks(ticker):
+    base_url    = "https://www.tipranks.com/stocks/"
+    url_section = "/dividends"
+    url  = f"{base_url}{ticker}{url_section}"
+    
+    #==================
+    r = requests.get(url)
+    soup = BeautifulSoup(r.content, 'html5lib')
+    fundamentals = soup.find_all('div', attrs={'data-s':'fundamentals'})
+    
+    try:
+        item = fundamentals[0]
+    except IndexError:
+        return ticker, None, None, None, None, None
+    
+    #========Regex Patterns
+    float_pattern = r"\$([0-9]+.[0-9]+)"  #for values like $1.64, $0.78, etc
+    int_pattern   = r"\$([0-9]+)"         #for values like $2, $10, $1, etc (no decimal point)
+    pattern       = f"{float_pattern}|{int_pattern}"
+    
+    negative_float_pattern = r"(?:\$[0-9]+.[0-9]+)"  #for values like $1.64, $0.78, etc
+    negative_int_pattern   = r"(?:\$[0-9]+)"         #for values like $2, $10, $1, etc (no decimal point)
+    schedule_type_pattern  = f"(?:{negative_float_pattern}|{negative_int_pattern})([a-z]+)\s*"
+    
+    months  = r"(jan|feb|mar|apr|may|jun|july|aug|sep|oct|nov|dec)"
+    date_pattern = f"({months} ([0-9]+), ([0-9]+))"
+    
+    ex_div_date_pattern  = f"(?:next ex-dividend date)\s*{date_pattern}"  #the ?: makes sure that the whole group inside the parenthesis is not captured
+    payment_date_pattern = f"(?:payment date)\s*{date_pattern}" 
+    
+    if item is not None:
+        str_item = item.text.lower()
+
+        res = re.search(pattern, str_item)
+        if res:
+            div_str    = res.group()
+            div_str    = div_str.replace("$", "")
+            div_amount = decimal.Decimal(div_str)
+            
+            #_str_ex_div_date = re.search(ex_div_date_pattern, str_item).groups()[0]  #first item   #date comes in format: Dec 15, 2021
+            
+            dates = re.findall(date_pattern, str_item)
+            _str_ex_div_date = dates[0][0]
+            _str_pay_date    = dates[1][0]
+            
+            ex_div_date   = datetime.strptime(_str_ex_div_date, "%b %d, %Y")    #datetime.strptime('Jun 1, 2005  1:33PM', '%b %d, %Y %I:%M%p')
+            payment_date  = datetime.strptime(_str_pay_date, "%b %d, %Y")
+            schedule_type = re.search(schedule_type_pattern, str_item).groups()[0].strip()
+            
+        return ticker, div_str, div_amount, ex_div_date, payment_date, schedule_type
+
+def write_table_to_csv(db, table='transactions', output_file=''):
+    TABLE_MAP = {
+        'transactions' : Transaction,
+        'positions'    : Position,
+        'events'       : Event,
+        'securities'   : Security,
+        'brokers'      : Broker,
+        'dividends'    : Dividend,
+    }
+
+    NO_SYMBOL_ID = (Security, CryptoCurrency, CryptoWallet, Broker)
+
+    if len(output_file) < 1:
+        folder_output = 'db_files'
+        if not os.path.exists(folder_output):
+            os.mkdir(folder_output)
+        output_file = os.path.join(folder_output, f"{table}.csv")
+            
+    table_class = TABLE_MAP.get(table.lower(), 'transactions')
+    sql_statement = db.session.query(table_class).statement
+    df = pd.read_sql(sql=sql_statement,con=db.session.bind)
+
+    #----------Replace Ticker Ids with Actual Tickers
+    if not isinstance(table_class, NO_SYMBOL_ID):
+        ids_to_tickers_dict = get_id_to_symbol_dict(db)
+        df = df.replace({'symbol_id':ids_to_tickers_dict})
+    df.to_csv(output_file,)
+
+def get_mysql_uri(config_file='mysql_config.yml', database_name=None):
+    with open(config_file) as f_handler:
+        config = yaml.safe_load(f_handler)
+        
+    username  = config.get('username')
+    password  = config.get('password')
+    host      = config.get('host')
+    port      = config.get('port')
+    _database = config.get('database') if database_name is None else database_name
+
+    database_URI = f"mysql://{username}:{password}@{host}:{port}/{_database}"
+    return database_URI
+
+def exists_in_table(new_entry, db):
+    table_class = type(new_entry)
+    match = False
+
+    if isinstance(new_entry, Security):
+        match = db.session.query(table_class).fitler(table_class.symbol==new_entry.symbol).first()
+    elif isinstance(new_entry, Broker):
+        pass
+
+    elif isinstance(new_entry, Transaction):
+        match = db.session.query(table_class).filter(
+            table_class.symbol_id==new_entry.symbol_id,
+            table_class.num_shares==new_entry.num_shares,
+            table_class.cost_basis==new_entry.cost_basis,
+            table_class.is_dividend==new_entry.is_dividend,
+            table_class.time_execution==new_entry.time_execution,
+            ).first()
+
+    if match:
+        return True
+    else:
+        return False
+
+def generate_unique_id(new_entry):
+    pass 
+
+if __name__ == '__main__':
+    #test writing database tables to csv
+    try:
+        table = sys.argv[1]
+    except IndexError:
+        table = 'transactions'
+    
+    database_URI = get_mysql_uri('mysql_config.yml')
+    print(f'--> MySQL URI:\n\t{database_URI}')
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_URI
+
+    db.init_app(app)
+    with app.app_context():
+        write_table_to_csv(db, table=table,)
