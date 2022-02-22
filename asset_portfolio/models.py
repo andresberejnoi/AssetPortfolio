@@ -1,4 +1,3 @@
-from os import sched_get_priority_max
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref
 #from flask import Flask
