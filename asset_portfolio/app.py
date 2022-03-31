@@ -112,6 +112,11 @@ def home():
     plot_fig = histogram_holdings()
     if plot_fig is not None:
         script, div = components(plot_fig)
+
+        print()
+        print(f"\n * Script is:\n\t{script}\n")
+        print(f"\n * Div is:\n\t{div}\n")
+
     else:
         script = ''
         div    = ''
